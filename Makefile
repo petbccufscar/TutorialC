@@ -403,3 +403,6 @@ ifeq ($(PLATFORM),PLATFORM_WEB)
 endif
 	@echo Cleaning done
 
+dini:
+	gcc main.c -o tutorialC -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+	./tutorialC
