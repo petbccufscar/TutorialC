@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "raylib.h"
 #include "raymath.h"
 
@@ -6,6 +7,30 @@
 // https://github.com/raysan5/raygui
 // #define RAYGUI_IMPLEMENTATION
 // #include "raygui.h"
+
+// Bloco Arrastável
+typedef struct Block {
+    Rectangle rec;
+    bool hover;
+    bool dragging;
+} Block;
+
+Block new_block(){
+    float width = 180.0 - rand() % 80; // TODO: Remover aleatório
+    float height = 40.0;
+    Rectangle rec = {
+        .height = height,
+        .width = width,
+        .x = ((float)GetScreenWidth() - width - 250)/2,
+        .y = (GetScreenHeight() - height)/2.0f
+    };
+    Block b = {
+        .rec = rec,
+        .hover = false,
+        .dragging = false,
+    };
+    return b;
+}
 
 int main(void)
 {
@@ -17,17 +42,20 @@ int main(void)
 
     // Indicador do mouse
     Vector2 mousePosition = {-100.0f, -100.0f};
+    Vector2 offset = {0.0f, 0.0f};
+    Block *holding = NULL;
     Color mouseIndicatorColor = DARKGRAY;
 
     Vector2 initialMousePosition = {0.0f, 0.0f};
 
-    // Retângulo (Teste)
-    bool hover = false;
-    bool dragging = false;
-    int width = 200;
-    int height = 100;
-    Vector2 offset = {0.0f, 0.0f};
-    Vector2 blockPosition = {((float)GetScreenWidth() - width - 250)/2, (GetScreenHeight() - height)/2.0f};
+    // Retângulos (Teste) e inicialização
+    const int NUM_BLOCKS = 3;
+    Block blocks[NUM_BLOCKS];
+    for (int i = 0; i < NUM_BLOCKS; i++){
+        blocks[i] = new_block();
+        blocks[i].rec.x += rand() % 100; //TODO: Remover aleatório
+        blocks[i].rec.y += rand() % 100; //TODO: Remover aleatório
+    }
 
     // Camera
     Camera2D camera = { 0 };
@@ -46,29 +74,28 @@ int main(void)
         float deltaTime = GetFrameTime();
         mousePosition = GetMousePosition();
 
-        Rectangle block = { 
-             blockPosition.x,
-             blockPosition.y,
-            (float)width, 
-            (float)height 
-        };
+        // Checa colisão mouse - blocos
+        for (int i = 0; i < NUM_BLOCKS; i++){
+            Block *b = &blocks[i];
+            Vector2 blockPosition = {b->rec.x, b->rec.y};
+            b->hover = CheckCollisionPointRec(mousePosition, b->rec);
 
-        // Checa colisão mouse - bloco
-        hover = CheckCollisionPointRec(GetMousePosition(), block);
-        if (hover && IsMouseButtonPressed(0)) {
+            if (b->hover && IsMouseButtonPressed(0)) {
             // Obtem posição do mouse relativa ao retângulo
-            printf("DEBUG: BLOCK: %f %f\n", blockPosition.x, blockPosition.y);
-            printf("DEBUG: MOUSE: %f %f\n", mousePosition.x, mousePosition.y);
             offset = Vector2Subtract(mousePosition, blockPosition);
-            printf("DEBUG: OFFSET: %f %f\n", offset.x, offset.y);
-            dragging = true;
+            b->dragging = true;
+            }
+            if (b->dragging && IsMouseButtonDown(0)) {
+                blockPosition = Vector2Subtract(mousePosition, offset);
+                b->rec.x = blockPosition.x;
+                b->rec.y = blockPosition.y;
+            }
+            if (IsMouseButtonReleased(0)) {
+                b->dragging = false;
+            };
         }
-        if (dragging && IsMouseButtonDown(0)) {
-            blockPosition = Vector2Subtract(mousePosition, offset);
-        }
-        if (IsMouseButtonReleased(0)) {
-            dragging = false;
-        };
+        // hover = CheckCollisionPointRec(GetMousePosition(), block);
+        
 
 
         camera.zoom += ((float)GetMouseWheelMove()*0.05f);
@@ -82,14 +109,20 @@ int main(void)
         BeginDrawing();
 
             ClearBackground(LIGHTGRAY);
-
-            DrawRectangleRoundedLines(block, 0.1f, 20, 1, DARKGRAY);
-            if (dragging) {
-                DrawRectangleRounded(block, 0.1f, 20, DARKBLUE);
-            } else if (hover) {
-                DrawRectangleRounded(block, 0.1f, 20, DARKGRAY);
-            };
-
+            
+            // Desenha os blocos
+            for (int i = 0; i < NUM_BLOCKS; i++){
+                Block *b = &blocks[i];
+                
+                DrawRectangleRoundedLines(b->rec, 0.1f, 20, 1, DARKGRAY);
+                if (b->dragging) {
+                    DrawRectangleRounded(b->rec, 0.1f, 20, DARKBLUE);
+                } else if (b->hover) {
+                    DrawRectangleRounded(b->rec, 0.1f, 20, DARKGRAY);
+                };
+            }
+            
+            // Indicador do mouse
             DrawCircleV(mousePosition, 5, mouseIndicatorColor);
 
             BeginMode2D(camera);
