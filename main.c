@@ -8,6 +8,9 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
+// Máximo de blocos que podem existir
+#define NUM_BLOCKS 5
+
 // Bloco Arrastável
 typedef struct Block {
     Rectangle rec;
@@ -21,8 +24,8 @@ Block new_block(){
     Rectangle rec = {
         .height = height,
         .width = width,
-        .x = ((float)GetScreenWidth() - width - 250)/2,
-        .y = (GetScreenHeight() - height)/2.0f
+        .x = rand() % (int)(GetScreenWidth() - width),
+        .y = rand() % (int)(GetScreenHeight() - height)
     };
     Block b = {
         .rec = rec,
@@ -30,6 +33,25 @@ Block new_block(){
         .dragging = false,
     };
     return b;
+}
+
+bool spawnBlock(Block *arr, int *num_blocks){
+    if (*num_blocks >= NUM_BLOCKS) {
+        return false; // Não é possível gerar mais blocos
+    } else {
+        arr[*num_blocks] = new_block();
+        *num_blocks += 1;
+        return true;
+    }
+}
+
+void DrawBlock(Block *b, Block *holding, Block *hovering){
+    DrawRectangleRoundedLines(b->rec, 0.1f, 20, 1, DARKGRAY); // Outline
+    if (holding == b) {
+        DrawRectangleRounded(b->rec, 0.1f, 20, DARKBLUE); // Preenchimento
+    } else if (hovering == b) {
+        DrawRectangleRounded(b->rec, 0.1f, 20, DARKGRAY); // Preenchimento
+    };
 }
 
 int main(void)
@@ -50,13 +72,8 @@ int main(void)
     Vector2 initialMousePosition = {0.0f, 0.0f};
 
     // Retângulos (Teste) e inicialização
-    const int NUM_BLOCKS = 10;
+    int num_blocks = 0; // Número de blocos no momento
     Block blocks[NUM_BLOCKS];
-    for (int i = 0; i < NUM_BLOCKS; i++){
-        blocks[i] = new_block();
-        blocks[i].rec.x = rand() % (int)(GetScreenWidth() - blocks[i].rec.width); //TODO: Remover aleatório
-        blocks[i].rec.y = rand() % (int)(GetScreenHeight() - blocks[i].rec.height); //TODO: Remover aleatório
-    }
 
     // Camera
     Camera2D camera = { 0 };
@@ -79,7 +96,7 @@ int main(void)
         mousePosition = GetMousePosition();
 
         // Update da colisão entre Mouse / Blocos
-        for (int i = 0; i < NUM_BLOCKS; i++){
+        for (int i = 0; i < num_blocks; i++){
             Block *b = &blocks[i];
             Vector2 blockPosition = {b->rec.x, b->rec.y};
 
@@ -123,15 +140,8 @@ int main(void)
             ClearBackground(LIGHTGRAY);
             
             // Desenha os blocos
-            for (int i = 0; i < NUM_BLOCKS; i++){
-                Block *b = &blocks[i];
-                
-                DrawRectangleRoundedLines(b->rec, 0.1f, 20, 1, DARKGRAY); // Outline
-                if (holding == b) {
-                    DrawRectangleRounded(b->rec, 0.1f, 20, DARKBLUE); // Preenchimento
-                } else if (hovering == b) {
-                    DrawRectangleRounded(b->rec, 0.1f, 20, DARKGRAY); // Preenchimento
-                };
+            for (int i = 0; i < num_blocks; i++){
+                DrawBlock(&blocks[i], holding, hovering);
             }
             
             // Indicador do mouse
@@ -144,6 +154,9 @@ int main(void)
             // Draw Controles GUI
             // ------------------------------------------------------------------------------
             drawMouseIndicator = GuiCheckBox((Rectangle){ 640, 380, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
+            if (GuiButton((Rectangle){640, 350, 100, 20}, GuiIconText(112, "Criar Bloco"))) { 
+                spawnBlock(blocks, &num_blocks);
+            }
             // ------------------------------------------------------------------------------
 
         EndDrawing();
