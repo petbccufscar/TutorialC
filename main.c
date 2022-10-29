@@ -10,9 +10,12 @@
 
 // Máximo de blocos que podem existir
 #define NUM_BLOCKS 5
+// Tamanho máximo do texto de cada bloco
+#define MAX_TEXT_BLOCK 20
 
 // Bloco Arrastável
 typedef struct Block {
+    char text[MAX_TEXT_BLOCK + 1];
     Rectangle rec;
     bool hover;
     bool dragging;
@@ -28,6 +31,7 @@ Block new_block(){
         .y = rand() % (int)(GetScreenHeight() - height)
     };
     Block b = {
+        .text = "Teste\0",
         .rec = rec,
         .hover = false,
         .dragging = false,
@@ -46,12 +50,16 @@ bool spawnBlock(Block *arr, int *num_blocks){
 }
 
 void DrawBlock(Block *b, Block *holding, Block *hovering){
+    Color textColor = MAROON;
     DrawRectangleRoundedLines(b->rec, 0.1f, 20, 1, DARKGRAY); // Outline
     if (holding == b) {
         DrawRectangleRounded(b->rec, 0.1f, 20, DARKBLUE); // Preenchimento
+        textColor = WHITE;
     } else if (hovering == b) {
         DrawRectangleRounded(b->rec, 0.1f, 20, DARKGRAY); // Preenchimento
+        textColor = WHITE;
     };
+    DrawText(b->text, (int)b->rec.x + 5, (int)b->rec.y + 8, 20, textColor); // Texto
 }
 
 int main(void)
