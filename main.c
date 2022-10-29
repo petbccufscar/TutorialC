@@ -190,10 +190,11 @@ int main(void)
 
             // Indicador do mouse
             if (drawMouseIndicator){
-                float radius = 4.0f;
-                if (hovering != NULL) radius = 7.0f;
-                if (holding != NULL) radius = 3.0f;
-                DrawCircleV(mousePosition, radius, mouseIndicatorColor);
+                float radius = 5.0f;
+                if (hovering != NULL) radius = 8.0f;
+                if (holding != NULL) radius = 4.0f;
+                DrawCircleV(mousePosition, radius, LIGHTGRAY);
+                DrawCircleV(mousePosition, radius-2, mouseIndicatorColor);
             }
 
         EndDrawing();
