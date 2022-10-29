@@ -9,7 +9,7 @@
 #include "raygui.h"
 
 // Máximo de blocos que podem existir
-#define NUM_BLOCKS 5
+#define NUM_BLOCKS 50
 // Tamanho máximo do texto de cada bloco
 #define MAX_TEXT_BLOCK 20
 
@@ -21,9 +21,10 @@ typedef struct Block {
     bool dragging;
 } Block;
 
-Block new_block(){
+Block new_block(char text[]){
     float width = 180.0 - rand() % 80; // TODO: Remover aleatório
     float height = 40.0;
+    printf("%s\n", text);
     Rectangle rec = {
         .height = height,
         .width = width,
@@ -31,19 +32,20 @@ Block new_block(){
         .y = rand() % (int)(GetScreenHeight() - height)
     };
     Block b = {
-        .text = "Teste\0",
+        .text = "",
         .rec = rec,
         .hover = false,
         .dragging = false,
     };
+    strcpy(b.text, text);
     return b;
 }
 
-bool spawnBlock(Block *arr, int *num_blocks){
+bool spawnBlock(Block *arr, int *num_blocks, char text[]){
     if (*num_blocks >= NUM_BLOCKS) {
         return false; // Não é possível gerar mais blocos
     } else {
-        arr[*num_blocks] = new_block();
+        arr[*num_blocks] = new_block(text);
         *num_blocks += 1;
         return true;
     }
@@ -65,8 +67,8 @@ void DrawBlock(Block *b, Block *holding, Block *hovering){
 int main(void)
 {
     // Janela
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+    const int screenWidth = 1000;
+    const int screenHeight = 650;
 
     InitWindow(screenWidth, screenHeight, "Tutorial C");
 
@@ -81,6 +83,7 @@ int main(void)
 
     // Retângulos (Teste) e inicialização
     int num_blocks = 0; // Número de blocos no momento
+    char text_block[MAX_TEXT_BLOCK] = "Alou";
     Block blocks[NUM_BLOCKS];
 
     // Camera
@@ -159,11 +162,14 @@ int main(void)
 
             EndMode2D();
 
-            // Draw Controles GUI
+            // Draw Controles GUI e Debugging
             // ------------------------------------------------------------------------------
-            drawMouseIndicator = GuiCheckBox((Rectangle){ 640, 380, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
-            if (GuiButton((Rectangle){640, 350, 100, 20}, GuiIconText(112, "Criar Bloco"))) { 
-                spawnBlock(blocks, &num_blocks);
+                // Ver https://raylibtech.itch.io/rguiicons para ID dos ícones
+            DrawFPS(10, 10);
+            drawMouseIndicator = GuiCheckBox((Rectangle){ screenWidth - 200, screenHeight - 50, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
+            GuiTextBox((Rectangle){screenWidth - 200, screenHeight - 80, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
+            if (GuiButton((Rectangle){screenWidth - 95, screenHeight - 80, 60, 20}, GuiIconText(112, "Criar"))) { 
+                spawnBlock(blocks, &num_blocks, text_block);
             }
             // ------------------------------------------------------------------------------
 
