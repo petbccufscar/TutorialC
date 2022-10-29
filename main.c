@@ -8,10 +8,11 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
-// Máximo de blocos que podem existir
-#define NUM_BLOCKS 50
-// Tamanho máximo do texto de cada bloco
-#define MAX_TEXT_BLOCK 20
+// Blocos
+#define NUM_BLOCKS 50 // Máximo de blocos que podem existir
+#define MAX_TEXT_BLOCK 30 // Tamanho máximo do texto de cada bloco
+#define FONT_SIZE 20 // Tamanho do texto
+#define BLOCK_TEXT_PADDING 8 // Padding entre o bloco e o texto no meio
 
 // Bloco Arrastável
 typedef struct Block {
@@ -22,8 +23,8 @@ typedef struct Block {
 } Block;
 
 Block new_block(char text[]){
-    float width = 180.0 - rand() % 80; // TODO: Remover aleatório
-    float height = 40.0;
+    float width = MeasureText(text, FONT_SIZE) + BLOCK_TEXT_PADDING * 2;
+    float height = FONT_SIZE + BLOCK_TEXT_PADDING * 2;
     printf("%s\n", text);
     Rectangle rec = {
         .height = height,
@@ -53,15 +54,17 @@ bool spawnBlock(Block *arr, int *num_blocks, char text[]){
 
 void DrawBlock(Block *b, Block *holding, Block *hovering){
     Color textColor = MAROON;
-    DrawRectangleRoundedLines(b->rec, 0.1f, 20, 1, DARKGRAY); // Outline
+    int segments = 50; float roundness = 0.4f; float lineThick = 2.0f;
+    DrawRectangleRoundedLines(b->rec, roundness, segments, lineThick, DARKGRAY); // Outline
+    DrawRectangleRounded(b->rec, roundness, segments, LIGHTGRAY); // Preenchimento sólido
     if (holding == b) {
-        DrawRectangleRounded(b->rec, 0.1f, 20, DARKBLUE); // Preenchimento
+        DrawRectangleRounded(b->rec, roundness, segments, MAROON); // Preenchimento
         textColor = WHITE;
     } else if (hovering == b) {
-        DrawRectangleRounded(b->rec, 0.1f, 20, DARKGRAY); // Preenchimento
+        DrawRectangleRounded(b->rec, roundness, segments, DARKGRAY); // Preenchimento
         textColor = WHITE;
     };
-    DrawText(b->text, (int)b->rec.x + 5, (int)b->rec.y + 8, 20, textColor); // Texto
+    DrawText(b->text, (int)b->rec.x + BLOCK_TEXT_PADDING, (int)b->rec.y + BLOCK_TEXT_PADDING, FONT_SIZE, textColor); // Texto
 }
 
 int main(void)
@@ -77,13 +80,13 @@ int main(void)
     Vector2 offset = {0.0f, 0.0f};
     Block *holding = NULL;
     Block *hovering = NULL;
-    Color mouseIndicatorColor = DARKGRAY;
+    Color mouseIndicatorColor = DARKPURPLE;
 
-    Vector2 initialMousePosition = {0.0f, 0.0f};
+    Vector2 initialMousePosition = GetMousePosition();
 
     // Retângulos (Teste) e inicialização
     int num_blocks = 0; // Número de blocos no momento
-    char text_block[MAX_TEXT_BLOCK] = "Alou";
+    char text_block[MAX_TEXT_BLOCK] = "Teste!";
     Block blocks[NUM_BLOCKS];
 
     // Camera
@@ -96,7 +99,7 @@ int main(void)
     SetTargetFPS(60);
 
     // Parâmetros dos controles 
-    bool drawMouseIndicator = true;
+    bool drawMouseIndicator = false;
 
     // Main game loop
     while (!WindowShouldClose())
@@ -107,6 +110,7 @@ int main(void)
         mousePosition = GetMousePosition();
 
         // Update da colisão entre Mouse / Blocos
+        // TODO: Consertar a seleção de blocos que são desenhados em cima do outro, mas que não seguem essa ordem para seleção
         for (int i = 0; i < num_blocks; i++){
             Block *b = &blocks[i];
             Vector2 blockPosition = {b->rec.x, b->rec.y};
@@ -142,6 +146,13 @@ int main(void)
         if (camera.zoom > 3.0f) camera.zoom = 3.0f;
         else if (camera.zoom < 0.25f) camera.zoom = 0.25f;
 
+        // Update do Mouse
+        if (drawMouseIndicator) {
+            DisableCursor();
+        } else {
+            EnableCursor();
+        }
+
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -154,24 +165,36 @@ int main(void)
             for (int i = 0; i < num_blocks; i++){
                 DrawBlock(&blocks[i], holding, hovering);
             }
-            
-            // Indicador do mouse
-            if (drawMouseIndicator) DrawCircleV(mousePosition, 5, mouseIndicatorColor);
 
             BeginMode2D(camera);
+
 
             EndMode2D();
 
             // Draw Controles GUI e Debugging
             // ------------------------------------------------------------------------------
                 // Ver https://raylibtech.itch.io/rguiicons para ID dos ícones
+            float posX = screenWidth - 200; float posY = screenHeight - 50;
+            float dist_linhas = 25;
             DrawFPS(10, 10);
-            drawMouseIndicator = GuiCheckBox((Rectangle){ screenWidth - 200, screenHeight - 50, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
-            GuiTextBox((Rectangle){screenWidth - 200, screenHeight - 80, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
-            if (GuiButton((Rectangle){screenWidth - 95, screenHeight - 80, 60, 20}, GuiIconText(112, "Criar"))) { 
+                // 0
+            drawMouseIndicator = GuiCheckBox((Rectangle){ posX, posY, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
+            posY -= dist_linhas; // 1
+            GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
+            if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
                 spawnBlock(blocks, &num_blocks, text_block);
             }
+            posY -= dist_linhas; // 2
+            DrawText("Painel de testes", posX, posY, 10, DARKGRAY);
             // ------------------------------------------------------------------------------
+
+            // Indicador do mouse
+            if (drawMouseIndicator){
+                float radius = 4.0f;
+                if (hovering != NULL) radius = 7.0f;
+                if (holding != NULL) radius = 3.0f;
+                DrawCircleV(mousePosition, radius, mouseIndicatorColor);
+            }
 
         EndDrawing();
         //----------------------------------------------------------------------------------
