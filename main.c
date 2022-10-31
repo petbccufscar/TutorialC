@@ -8,11 +8,14 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
-// Blocos
+// Blocos Arrastáveis
 #define NUM_BLOCKS 50 // Máximo de blocos que podem existir
 #define MAX_TEXT_BLOCK 30 // Tamanho máximo do texto de cada bloco
 #define FONT_SIZE 20 // Tamanho do texto
 #define BLOCK_TEXT_PADDING 8 // Padding entre o bloco e o texto no meio
+// Campo de Bloco
+#define NUM_BLOCK_FIELDS 50 // Máximo de campos de bloco
+#define BLOCK_FIELD_PADDING 4 // Padding entre o campo do bloco e o bloco
 
 // Bloco Arrastável
 typedef struct Block {
@@ -22,10 +25,10 @@ typedef struct Block {
     bool dragging;
 } Block;
 
-Block new_block(char text[]){
+Block new_block(char text[]) {
     float width = MeasureText(text, FONT_SIZE) + BLOCK_TEXT_PADDING * 2;
     float height = FONT_SIZE + BLOCK_TEXT_PADDING * 2;
-    printf("%s\n", text);
+
     Rectangle rec = {
         .height = height,
         .width = width,
@@ -36,14 +39,16 @@ Block new_block(char text[]){
         .text = "",
         .rec = rec,
         .hover = false,
-        .dragging = false,
+        .dragging = false
     };
     strcpy(b.text, text);
+
     return b;
 }
 
-bool spawnBlock(Block *arr, int *num_blocks, char text[]){
+bool spawnBlock(Block *arr, int *num_blocks, char text[]) {
     if (*num_blocks >= NUM_BLOCKS) {
+        printf("Não foi possível gerar um novo bloco, máximo (%d) atingido\n", NUM_BLOCKS);
         return false; // Não é possível gerar mais blocos
     } else {
         arr[*num_blocks] = new_block(text);
@@ -52,7 +57,7 @@ bool spawnBlock(Block *arr, int *num_blocks, char text[]){
     }
 }
 
-void DrawBlock(Block *b, Block *holding, Block *hovering){
+void DrawBlock(Block *b, Block *holding, Block *hovering) {
     Color textColor = MAROON;
     int segments = 50; float roundness = 0.4f; float lineThick = 2.0f;
     DrawRectangleRoundedLines(b->rec, roundness, segments, lineThick, DARKGRAY); // Outline
@@ -65,6 +70,48 @@ void DrawBlock(Block *b, Block *holding, Block *hovering){
         textColor = WHITE;
     };
     DrawText(b->text, (int)b->rec.x + BLOCK_TEXT_PADDING, (int)b->rec.y + BLOCK_TEXT_PADDING, FONT_SIZE, textColor); // Texto
+}
+
+
+// Campo de bloco
+typedef struct BlockField {
+    Block *block; 
+    Rectangle rec;
+} BlockField;
+
+BlockField new_blockfield() {
+    // Dimensões iniciais
+    float width, height;
+    height = width = FONT_SIZE + (BLOCK_FIELD_PADDING + BLOCK_TEXT_PADDING) * 2;
+
+    Rectangle rec = {
+        .height = height,
+        .width = width,
+        .x = rand() % (int)(GetScreenWidth() - width),
+        .y = rand() % (int)(GetScreenHeight() - height)
+    };
+    BlockField bf = {
+        .block = NULL,
+        .rec = rec
+    };
+
+    return bf;
+}
+
+bool spawnBlockField(BlockField *arr, int *num_bfields) {
+    if(*num_bfields >= NUM_BLOCK_FIELDS) {
+        printf("Não foi possível gerar um novo campo, máximo (%d) atingido\n", NUM_BLOCK_FIELDS);
+        return false; // Não é possível gerar um novo campo
+    } else {
+        arr[*num_bfields] = new_blockfield();
+        *num_bfields += 1;
+        return true;
+    }
+}
+
+void DrawBlockField(BlockField *bf) {
+    int segments = 50; float roundness = 0.4f; float lineThick = 1.0f;
+    DrawRectangleRoundedLines(bf->rec, roundness, segments, lineThick, MAROON);
 }
 
 int main(void)
@@ -84,10 +131,14 @@ int main(void)
 
     Vector2 initialMousePosition = GetMousePosition();
 
-    // Retângulos (Teste) e inicialização
+    // Blocos e inicialização
     int num_blocks = 0; // Número de blocos no momento
     char text_block[MAX_TEXT_BLOCK] = "Teste!";
     Block blocks[NUM_BLOCKS];
+
+    // Campos de Bloco e inicialização
+    int num_bfields = 0; // Número de campos de bloco no momento
+    BlockField bfields[NUM_BLOCK_FIELDS];
 
     // Camera
     Camera2D camera = { 0 };
@@ -109,9 +160,38 @@ int main(void)
         float deltaTime = GetFrameTime();
         mousePosition = GetMousePosition();
 
+        // Update da colisão entre Mouse / Campos de Bloco
+        // Quando um mouse está segurando um bloco e para em cima de um campo, esse
+        // campo deve acomodar o bloco. 
+        // TODO: Potencialmente alterar esse comportamento pro mouse não precisar estar
+        //       exatamente em cima, ou uma colisão levando em conta o rec do bloco tbm
+        for (int i = 0; i < num_bfields; i++) {
+            BlockField *bf = &bfields[i];
+            if (holding != NULL && CheckCollisionPointRec(mousePosition, bf->rec) && IsMouseButtonReleased(0)) {
+                    // É importante que essa parte de código seja executada antes do `holding = NULL;` lá embaixo
+                    // TODO: Refatorar isso? Updates do mouse antes de tudo talvez, atualizar holding, hovering depois de tudo
+                    bf->block = holding;
+                    // Move o bloco para o campo
+                    bf->block->rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
+                    bf->block->rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
+                    // Ajusta tamanho do campo
+                    bf->rec.width = bf->block->rec.width  + BLOCK_FIELD_PADDING * 2;
+                }
+            if (bf->block != NULL) {
+                // O bloco está no lugar certo? Se o botão do mouse estiver pressionado, esperamos o usuário terminar a ação dele
+                if ((bf->block->rec.x != bf->rec.x + BLOCK_FIELD_PADDING || 
+                    bf->block->rec.y != bf->rec.y + BLOCK_FIELD_PADDING) &&
+                    !IsMouseButtonDown(0)) 
+                {
+                    bf->block = NULL;
+                    bf->rec.width = bf->rec.height;
+                }
+            }
+        }
+
         // Update da colisão entre Mouse / Blocos
         // TODO: Consertar a seleção de blocos que são desenhados em cima do outro, mas que não seguem essa ordem para seleção
-        for (int i = 0; i < num_blocks; i++){
+        for (int i = 0; i < num_blocks; i++) {
             Block *b = &blocks[i];
             Vector2 blockPosition = {b->rec.x, b->rec.y};
 
@@ -162,8 +242,13 @@ int main(void)
             ClearBackground(LIGHTGRAY);
             
             // Desenha os blocos
-            for (int i = 0; i < num_blocks; i++){
+            for (int i = 0; i < num_blocks; i++) {
                 DrawBlock(&blocks[i], holding, hovering);
+            }
+
+            // Desenha os campos
+            for (int i = 0; i < num_bfields; i++) {
+                DrawBlockField(&bfields[i]);
             }
 
             BeginMode2D(camera);
@@ -177,14 +262,21 @@ int main(void)
             float posX = screenWidth - 200; float posY = screenHeight - 50;
             float dist_linhas = 25;
             DrawFPS(10, 10);
-                // 0
+            // 0
             drawMouseIndicator = GuiCheckBox((Rectangle){ posX, posY, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
-            posY -= dist_linhas; // 1
+            // 1
+            posY -= dist_linhas;
+            if (GuiButton((Rectangle){posX, posY, 165, 20}, GuiIconText(112, "Criar Campo"))) { 
+                spawnBlockField(bfields, &num_bfields);
+            }
+            // 2
+            posY -= dist_linhas;
             GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
             if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
                 spawnBlock(blocks, &num_blocks, text_block);
             }
-            posY -= dist_linhas; // 2
+            // 3
+            posY -= dist_linhas;
             DrawText("Painel de testes", posX, posY, 10, DARKGRAY);
             // ------------------------------------------------------------------------------
 
