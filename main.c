@@ -167,7 +167,7 @@ int main(void)
         //       exatamente em cima, ou uma colisão levando em conta o rec do bloco tbm
         for (int i = 0; i < num_bfields; i++) {
             BlockField *bf = &bfields[i];
-            if (holding != NULL && CheckCollisionPointRec(mousePosition, bf->rec) && IsMouseButtonReleased(0)) {
+            if (bf-> block == NULL && holding != NULL && CheckCollisionPointRec(mousePosition, bf->rec) && IsMouseButtonReleased(0)) {
                     // É importante que essa parte de código seja executada antes do `holding = NULL;` lá embaixo
                     // TODO: Refatorar isso? Updates do mouse antes de tudo talvez, atualizar holding, hovering depois de tudo
                     bf->block = holding;
