@@ -50,14 +50,13 @@ Block newBlock(char text[], Vector2 position) {
     return b;
 }
 
-bool spawnBlock(Block *arr, int *num_blocks, char text[], Vector2 position) {
+Block* spawnBlock(Block *arr, int *num_blocks, char text[], Vector2 position) {
     if (*num_blocks >= NUM_BLOCKS) {
         printf("Não foi possível gerar um novo bloco, máximo (%d) atingido\n", NUM_BLOCKS);
-        return false; // Não é possível gerar mais blocos
+        return NULL; // Não é possível gerar mais blocos
     } else {
         arr[*num_blocks] = newBlock(text, position);
-        *num_blocks += 1;
-        return true;
+        return &arr[(*num_blocks)++]; // Retorna num_blocks e depois aumenta o valor
     }
 }
 
@@ -67,10 +66,10 @@ void DrawBlock(Block *b, Block *holding, Block *hovering) {
     DrawRectangleRoundedLines(b->rec, roundness, segments, lineThick, DARKGRAY); // Outline
     DrawRectangleRounded(b->rec, roundness, segments, LIGHTGRAY); // Preenchimento sólido
     if (holding == b) {
-        DrawRectangleRounded(b->rec, roundness, segments, MAROON); // Preenchimento
+        DrawRectangleRounded(b->rec, roundness, segments, MAROON); // Preenchimento segurando
         textColor = WHITE;
     } else if (hovering == b) {
-        DrawRectangleRounded(b->rec, roundness, segments, DARKGRAY); // Preenchimento
+        DrawRectangleRounded(b->rec, roundness, segments, DARKGRAY); // Preenchimento hovering
         textColor = WHITE;
     };
     DrawText(b->text, (int)b->rec.x + BLOCK_TEXT_PADDING, (int)b->rec.y + BLOCK_TEXT_PADDING, FONT_SIZE, textColor); // Texto
@@ -165,8 +164,8 @@ int main(void)
 
     // Blocos e inicialização
     int num_blocks = 0; // Número de blocos no momento
-    char text_block[MAX_TEXT_BLOCK] = "Teste!";
-    Block blocks[NUM_BLOCKS];
+    char text_block[MAX_TEXT_BLOCK] = "Teste!"; // Texto usado nos blocos, alterado pela GUI
+    Block blocks[NUM_BLOCKS]; // TODO: Acho que vai precisar escrever uma lista ligada pra permitir a remoção de blocos... trabaio ein
 
     // Campos de Bloco e inicialização
     int num_bfields = 0; // Número de campos de bloco no momento
@@ -232,45 +231,13 @@ int main(void)
             }
         }
 
-        // Update da colisão entre Mouse / Blocos
-        // TODO: Consertar a seleção de blocos que são desenhados em cima do outro, mas que não seguem essa ordem para seleção
-        for (int i = 0; i < num_blocks; i++) {
-            Block *b = &blocks[i];
-            Vector2 blockPosition = {b->rec.x, b->rec.y};
-
-            b->hover = CheckCollisionPointRec(mousePosition, b->rec);
-            if (b->hover && hovering == NULL) {
-                hovering = b;
-            } else if (hovering == b && !b->hover) {
-                hovering = NULL;
-            }
-
-            if (hovering == b && IsMouseButtonPressed(0) && holding == NULL) {
-                // Obtem posição do mouse relativa ao retângulo
-                offset = Vector2Subtract(mousePosition, blockPosition);
-                holding = b;
-                b->dragging = true;
-            }
-
-            if (b->dragging && IsMouseButtonDown(0)) {
-                // Usando o offset, move o bloco selecionado
-                blockPosition = Vector2Subtract(mousePosition, offset);
-                b->rec.x = blockPosition.x;
-                b->rec.y = blockPosition.y;
-            }
-
-            if (IsMouseButtonReleased(0)) {
-                holding = NULL;
-                b->dragging = false;
-            };
-        }
-
         // Update da colisão Mouse / Gerador de Blocos
         for (int i = 0; i < num_bspawner; i++) {
             BlockSpawner *bs = &bspawners[i];
             Block *base = &bs->base;
             Vector2 basePosition = {base->rec.x, base->rec.y};
 
+            // Hover
             base->hover = CheckCollisionPointRec(mousePosition, base->rec);
             if (base->hover && hovering == NULL) {
                 hovering = base;
@@ -278,22 +245,53 @@ int main(void)
                 hovering = NULL;
             }
 
+            // Holding e Dragging
             if (hovering == base && IsMouseButtonPressed(0) && holding == NULL) {
                 // Obtem posição do mouse relativa ao retângulo
                 offset = Vector2Subtract(mousePosition, basePosition);
                 // Cria um novo bloco
-                holding = base;
-                base->dragging = true;
+                bs->block = spawnBlock(blocks, &num_blocks, base->text, Vector2Add(basePosition, (Vector2){20,20}));
+                if (bs->block != NULL) {
+                    holding = bs->block;
+                    bs->block->dragging = true;
+                }
             }
-            if (base->dragging && IsMouseButtonDown(0)) {
+        }
+
+        // Update da colisão entre Mouse / Blocos
+        // TODO: Consertar a seleção de blocos que são desenhados em cima do outro, mas que não seguem essa ordem para seleção
+        for (int i = 0; i < num_blocks; i++) {
+            Block *b = &blocks[i];
+            Vector2 blockPosition = {b->rec.x, b->rec.y};
+
+            // Hover
+            b->hover = CheckCollisionPointRec(mousePosition, b->rec);
+            if (b->hover && hovering == NULL) {
+                hovering = b;
+            } else if (hovering == b && !b->hover) {
+                hovering = NULL;
+            }
+
+            // Holding e Dragging
+            if (hovering == b && IsMouseButtonPressed(0) && holding == NULL) {
+                // Obtem posição do mouse relativa ao retângulo
+                offset = Vector2Subtract(mousePosition, blockPosition);
+                holding = b;
+                b->dragging = true;
+            }
+
+            // Movimento do bloco
+            if (b->dragging && IsMouseButtonDown(0)) {
                 // Usando o offset, move o bloco selecionado
-                basePosition = Vector2Subtract(mousePosition, offset);
-                base->rec.x = basePosition.x;
-                base->rec.y = basePosition.y;
+                blockPosition = Vector2Subtract(mousePosition, offset);
+                b->rec.x = blockPosition.x;
+                b->rec.y = blockPosition.y;
             }
+
+            // Soltar o mouse
             if (IsMouseButtonReleased(0)) {
                 holding = NULL;
-                base->dragging = false;
+                b->dragging = false;
             };
         }
 
@@ -318,6 +316,11 @@ int main(void)
 
             ClearBackground(LIGHTGRAY);
             
+            // Desenha geradores de blocos
+            for (int i = 0; i < num_bspawner; i++) {
+                DrawBlockSpawner(&bspawners[i], holding, hovering);
+            }
+
             // Desenha os blocos
             for (int i = 0; i < num_blocks; i++) {
                 DrawBlock(&blocks[i], holding, hovering);
@@ -326,11 +329,6 @@ int main(void)
             // Desenha os campos
             for (int i = 0; i < num_bfields; i++) {
                 DrawBlockField(&bfields[i]);
-            }
-
-            // Desenha geradores de blocos
-            for (int i = 0; i < num_bspawner; i++) {
-                DrawBlockSpawner(&bspawners[i], holding, hovering);
             }
 
             BeginMode2D(camera);
@@ -355,7 +353,7 @@ int main(void)
             posY -= dist_linhas;
             GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
             if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
-                spawnBlock(blocks, &num_blocks, text_block, (Vector2){rand() % (int)(GetScreenWidth()-50), rand() % (int)(GetScreenWidth()-50)});
+                spawnBlock(blocks, &num_blocks, text_block, (Vector2){(int)(GetScreenWidth())/2, rand() % (int)(GetScreenWidth())});
             }
             // 3
             posY -= dist_linhas;
