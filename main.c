@@ -27,15 +27,17 @@ typedef struct Block {
     bool dragging;
 } Block;
 
-Block newBlock(char text[]) {
+Block newBlock(char text[], Vector2 position) {
     float width = MeasureText(text, FONT_SIZE) + BLOCK_TEXT_PADDING * 2;
     float height = FONT_SIZE + BLOCK_TEXT_PADDING * 2;
 
     Rectangle rec = {
         .height = height,
         .width = width,
-        .x = rand() % (int)(GetScreenWidth() - width),
-        .y = rand() % (int)(GetScreenHeight() - height)
+        .x = position.x,
+        .y = position.y
+        // .x = ,
+        // .y = rand() % (int)(GetScreenHeight() - height)
     };
     Block b = {
         .text = "",
@@ -48,12 +50,12 @@ Block newBlock(char text[]) {
     return b;
 }
 
-bool spawnBlock(Block *arr, int *num_blocks, char text[]) {
+bool spawnBlock(Block *arr, int *num_blocks, char text[], Vector2 position) {
     if (*num_blocks >= NUM_BLOCKS) {
         printf("Não foi possível gerar um novo bloco, máximo (%d) atingido\n", NUM_BLOCKS);
         return false; // Não é possível gerar mais blocos
     } else {
-        arr[*num_blocks] = newBlock(text);
+        arr[*num_blocks] = newBlock(text, position);
         *num_blocks += 1;
         return true;
     }
@@ -176,9 +178,9 @@ int main(void)
     //       testes aqui    
     int num_bspawner = 0;
     BlockSpawner bspawners[NUM_BLOCK_SPAWNER];
-    Block bTeste = newBlock("Teste");
+    Block bTeste = newBlock("Teste", (Vector2){20, 50});
     spawnBlockSpawner(bspawners, &num_bspawner, bTeste);
-    Block bTeste2 = newBlock("Teste 2");
+    Block bTeste2 = newBlock("Teste 2", (Vector2){20, 100});
     spawnBlockSpawner(bspawners, &num_bspawner, bTeste2);
 
     // Camera
@@ -249,12 +251,14 @@ int main(void)
                 holding = b;
                 b->dragging = true;
             }
+
             if (b->dragging && IsMouseButtonDown(0)) {
                 // Usando o offset, move o bloco selecionado
                 blockPosition = Vector2Subtract(mousePosition, offset);
                 b->rec.x = blockPosition.x;
                 b->rec.y = blockPosition.y;
             }
+
             if (IsMouseButtonReleased(0)) {
                 holding = NULL;
                 b->dragging = false;
@@ -277,6 +281,7 @@ int main(void)
             if (hovering == base && IsMouseButtonPressed(0) && holding == NULL) {
                 // Obtem posição do mouse relativa ao retângulo
                 offset = Vector2Subtract(mousePosition, basePosition);
+                // Cria um novo bloco
                 holding = base;
                 base->dragging = true;
             }
@@ -350,7 +355,7 @@ int main(void)
             posY -= dist_linhas;
             GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
             if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
-                spawnBlock(blocks, &num_blocks, text_block);
+                spawnBlock(blocks, &num_blocks, text_block, (Vector2){rand() % (int)(GetScreenWidth()-50), rand() % (int)(GetScreenWidth()-50)});
             }
             // 3
             posY -= dist_linhas;
