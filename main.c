@@ -16,6 +16,8 @@
 // Campo de Bloco
 #define NUM_BLOCK_FIELDS 50 // Máximo de campos de bloco
 #define BLOCK_FIELD_PADDING 4 // Padding entre o campo do bloco e o bloco
+// Geradores de Blocos
+#define NUM_BLOCK_SPAWNER 50 // Máximo de geradores de blocos
 
 // Bloco Arrastável
 typedef struct Block {
@@ -25,7 +27,7 @@ typedef struct Block {
     bool dragging;
 } Block;
 
-Block new_block(char text[]) {
+Block newBlock(char text[]) {
     float width = MeasureText(text, FONT_SIZE) + BLOCK_TEXT_PADDING * 2;
     float height = FONT_SIZE + BLOCK_TEXT_PADDING * 2;
 
@@ -51,7 +53,7 @@ bool spawnBlock(Block *arr, int *num_blocks, char text[]) {
         printf("Não foi possível gerar um novo bloco, máximo (%d) atingido\n", NUM_BLOCKS);
         return false; // Não é possível gerar mais blocos
     } else {
-        arr[*num_blocks] = new_block(text);
+        arr[*num_blocks] = newBlock(text);
         *num_blocks += 1;
         return true;
     }
@@ -72,6 +74,34 @@ void DrawBlock(Block *b, Block *holding, Block *hovering) {
     DrawText(b->text, (int)b->rec.x + BLOCK_TEXT_PADDING, (int)b->rec.y + BLOCK_TEXT_PADDING, FONT_SIZE, textColor); // Texto
 }
 
+// Gerador de Bloco
+typedef struct BlockSpawner {
+    Block base;
+    Block *block;
+} BlockSpawner;
+
+BlockSpawner newBlockSpawner(Block base) {
+    BlockSpawner bs = {
+        .base = base,
+        .block = NULL,
+    };
+    return bs;
+}
+
+bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base) {
+    if (*num_bspawners >= NUM_BLOCK_SPAWNER) {
+        printf("Não foi possível gerar um novo gerador de blocos, máximo (%d) atingido\n", NUM_BLOCK_SPAWNER);
+        return false; // Não é possível gerar mais blocos
+    } else {
+        arr[*num_bspawners] = newBlockSpawner(base);
+        *num_bspawners += 1;
+        return true;
+    }
+}
+
+void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering) {
+    DrawBlock(&bf->base, holding, hovering);
+}
 
 // Campo de bloco
 typedef struct BlockField {
@@ -79,7 +109,7 @@ typedef struct BlockField {
     Rectangle rec;
 } BlockField;
 
-BlockField new_blockfield() {
+BlockField newBlockField() {
     // Dimensões iniciais
     float width, height;
     height = width = FONT_SIZE + (BLOCK_FIELD_PADDING + BLOCK_TEXT_PADDING) * 2;
@@ -103,7 +133,7 @@ bool spawnBlockField(BlockField *arr, int *num_bfields) {
         printf("Não foi possível gerar um novo campo, máximo (%d) atingido\n", NUM_BLOCK_FIELDS);
         return false; // Não é possível gerar um novo campo
     } else {
-        arr[*num_bfields] = new_blockfield();
+        arr[*num_bfields] = newBlockField();
         *num_bfields += 1;
         return true;
     }
@@ -139,6 +169,17 @@ int main(void)
     // Campos de Bloco e inicialização
     int num_bfields = 0; // Número de campos de bloco no momento
     BlockField bfields[NUM_BLOCK_FIELDS];
+
+    // Spawners de Bloco e inicialização
+    // TODO: Aqui vai ser necessário pegar todos os geradores que precisa colocar
+    //       calcular a posição de cada um e ai sim colocar no vetor, apenas para
+    //       testes aqui    
+    int num_bspawner = 0;
+    BlockSpawner bspawners[NUM_BLOCK_SPAWNER];
+    Block bTeste = newBlock("Teste");
+    spawnBlockSpawner(bspawners, &num_bspawner, bTeste);
+    Block bTeste2 = newBlock("Teste 2");
+    spawnBlockSpawner(bspawners, &num_bspawner, bTeste2);
 
     // Camera
     Camera2D camera = { 0 };
@@ -220,6 +261,37 @@ int main(void)
             };
         }
 
+        // Update da colisão Mouse / Gerador de Blocos
+        for (int i = 0; i < num_bspawner; i++) {
+            BlockSpawner *bs = &bspawners[i];
+            Block *base = &bs->base;
+            Vector2 basePosition = {base->rec.x, base->rec.y};
+
+            base->hover = CheckCollisionPointRec(mousePosition, base->rec);
+            if (base->hover && hovering == NULL) {
+                hovering = base;
+            } else if (hovering == base && !base->hover) {
+                hovering = NULL;
+            }
+
+            if (hovering == base && IsMouseButtonPressed(0) && holding == NULL) {
+                // Obtem posição do mouse relativa ao retângulo
+                offset = Vector2Subtract(mousePosition, basePosition);
+                holding = base;
+                base->dragging = true;
+            }
+            if (base->dragging && IsMouseButtonDown(0)) {
+                // Usando o offset, move o bloco selecionado
+                basePosition = Vector2Subtract(mousePosition, offset);
+                base->rec.x = basePosition.x;
+                base->rec.y = basePosition.y;
+            }
+            if (IsMouseButtonReleased(0)) {
+                holding = NULL;
+                base->dragging = false;
+            };
+        }
+
         // Update da Cãmera
         camera.zoom += ((float)GetMouseWheelMove()*0.05f);
 
@@ -249,6 +321,11 @@ int main(void)
             // Desenha os campos
             for (int i = 0; i < num_bfields; i++) {
                 DrawBlockField(&bfields[i]);
+            }
+
+            // Desenha geradores de blocos
+            for (int i = 0; i < num_bspawner; i++) {
+                DrawBlockSpawner(&bspawners[i], holding, hovering);
             }
 
             BeginMode2D(camera);
