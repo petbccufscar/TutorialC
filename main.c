@@ -164,6 +164,106 @@ Mouse newMouse() {
     return m;
 }
 
+// Funções de Atualização
+void updateMouseCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
+    // Update da colisão entre Mouse / Campos de Bloco
+    // Quando um mouse está segurando um bloco e para em cima de um campo, esse
+    // campo deve acomodar o bloco. 
+    // TODO: Potencialmente alterar esse comportamento pro mouse não precisar estar
+    //       exatamente em cima, ou uma colisão levando em conta o rec do bloco tbm
+    for (int i = 0; i < *num_bfields; i++) {
+        BlockField *bf = &bfields[i];
+        if ((bf->block == NULL || bf->block == mouse->holding) && mouse->holding != NULL && CheckCollisionPointRec(mouse->position, bf->rec) && IsMouseButtonReleased(0)) {
+                // É importante que essa parte de código seja executada antes do `holding = NULL;` lá embaixo
+                // TODO: Refatorar isso? Updates do mouse antes de tudo talvez, atualizar holding, hovering depois de tudo
+                bf->block = mouse->holding;
+                // Move o bloco para o campo
+                bf->block->rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
+                bf->block->rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
+                // Ajusta tamanho do campo
+                bf->rec.width = bf->block->rec.width  + BLOCK_FIELD_PADDING * 2;
+            }
+        if (bf->block != NULL) {
+            // O bloco está no lugar certo? Se o botão do mouse estiver pressionado, esperamos o usuário terminar a ação dele
+            if ((bf->block->rec.x != bf->rec.x + BLOCK_FIELD_PADDING || 
+                bf->block->rec.y != bf->rec.y + BLOCK_FIELD_PADDING) &&
+                !IsMouseButtonDown(0)) 
+            {
+                bf->block = NULL;
+                bf->rec.width = bf->rec.height;
+            }
+        }
+    }
+}
+
+void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSpawner bspawners[], int *num_bspawners) {
+    // Update da colisão Mouse / Gerador de Blocos
+    for (int i = 0; i < *num_bspawners; i++) {
+        BlockSpawner *bs = &bspawners[i];
+        Block *base = &bs->base;
+        Vector2 basePosition = {base->rec.x, base->rec.y};
+
+        // Hover
+        base->hover = CheckCollisionPointRec(mouse->position, base->rec);
+        if (base->hover && mouse->hovering == NULL) {
+            mouse->hovering = base;
+        } else if (mouse->hovering == base && !base->hover) {
+            mouse->hovering = NULL;
+        }
+
+        // Holding e Dragging
+        if (mouse->hovering == base && IsMouseButtonPressed(0) && mouse->holding == NULL) {
+            // Obtem posição do mouse relativa ao retângulo
+            mouse->offset = Vector2Subtract(mouse->position, basePosition);
+            // Cria um novo bloco
+            bs->block = spawnBlock(blocks, num_blocks, base->text, Vector2Add(basePosition, (Vector2){20,20}));
+            if (bs->block != NULL) {
+                mouse->holding = bs->block;
+                bs->block->dragging = true;
+            }
+        }
+    }
+}
+
+void updateMouseBlocos(Mouse *mouse, Block blocks[], int *num_blocks) {
+    // Update da colisão entre Mouse / Blocos
+    // TODO: Consertar a seleção de blocos que são desenhados em cima do outro, mas que não seguem essa ordem para seleção
+    for (int i = 0; i < *num_blocks; i++) {
+        Block *b = &blocks[i];
+        Vector2 blockPosition = {b->rec.x, b->rec.y};
+
+        // Hover
+        b->hover = CheckCollisionPointRec(mouse->position, b->rec);
+        if (b->hover && mouse->hovering == NULL) {
+            mouse->hovering = b;
+        } else if (mouse->hovering == b && !b->hover) {
+            mouse->hovering = NULL;
+        }
+
+        // Holding e Dragging
+        if (mouse->hovering == b && IsMouseButtonPressed(0) && mouse->holding == NULL) {
+            // Obtem posição do mouse relativa ao retângulo
+            mouse->offset = Vector2Subtract(mouse->position, blockPosition);
+            mouse->holding = b;
+            b->dragging = true;
+        }
+
+        // Movimento do bloco
+        if (b->dragging && IsMouseButtonDown(0)) {
+            // Usando o offset, move o bloco selecionado
+            blockPosition = Vector2Subtract(mouse->position, mouse->offset);
+            b->rec.x = blockPosition.x;
+            b->rec.y = blockPosition.y;
+        }
+
+        // Soltar o mouse
+        if (IsMouseButtonReleased(0)) {
+            mouse->holding = NULL;
+            b->dragging = false;
+        };
+    }
+}
+
 int main(void)
 {
     // Janela
@@ -188,12 +288,12 @@ int main(void)
     // TODO: Aqui vai ser necessário pegar todos os geradores que precisa colocar
     //       calcular a posição de cada um e ai sim colocar no vetor, apenas para
     //       testes aqui    
-    int num_bspawner = 0;
+    int num_bspawners = 0;
     BlockSpawner bspawners[NUM_BLOCK_SPAWNER];
     Block bTeste = newBlock("Teste", (Vector2){20, 50});
-    spawnBlockSpawner(bspawners, &num_bspawner, bTeste);
+    spawnBlockSpawner(bspawners, &num_bspawners, bTeste);
     Block bTeste2 = newBlock("Teste 2", (Vector2){20, 100});
-    spawnBlockSpawner(bspawners, &num_bspawner, bTeste2);
+    spawnBlockSpawner(bspawners, &num_bspawners, bTeste2);
 
     // Camera
     Camera2D camera = { 0 };
@@ -215,98 +315,9 @@ int main(void)
         float deltaTime = GetFrameTime();
         mouse.position = GetMousePosition();
 
-        // Update da colisão entre Mouse / Campos de Bloco
-        // Quando um mouse está segurando um bloco e para em cima de um campo, esse
-        // campo deve acomodar o bloco. 
-        // TODO: Potencialmente alterar esse comportamento pro mouse não precisar estar
-        //       exatamente em cima, ou uma colisão levando em conta o rec do bloco tbm
-        for (int i = 0; i < num_bfields; i++) {
-            BlockField *bf = &bfields[i];
-            if ((bf->block == NULL || bf->block == mouse.holding) && mouse.holding != NULL && CheckCollisionPointRec(mouse.position, bf->rec) && IsMouseButtonReleased(0)) {
-                    // É importante que essa parte de código seja executada antes do `holding = NULL;` lá embaixo
-                    // TODO: Refatorar isso? Updates do mouse antes de tudo talvez, atualizar holding, hovering depois de tudo
-                    bf->block = mouse.holding;
-                    // Move o bloco para o campo
-                    bf->block->rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
-                    bf->block->rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
-                    // Ajusta tamanho do campo
-                    bf->rec.width = bf->block->rec.width  + BLOCK_FIELD_PADDING * 2;
-                }
-            if (bf->block != NULL) {
-                // O bloco está no lugar certo? Se o botão do mouse estiver pressionado, esperamos o usuário terminar a ação dele
-                if ((bf->block->rec.x != bf->rec.x + BLOCK_FIELD_PADDING || 
-                    bf->block->rec.y != bf->rec.y + BLOCK_FIELD_PADDING) &&
-                    !IsMouseButtonDown(0)) 
-                {
-                    bf->block = NULL;
-                    bf->rec.width = bf->rec.height;
-                }
-            }
-        }
-
-        // Update da colisão Mouse / Gerador de Blocos
-        for (int i = 0; i < num_bspawner; i++) {
-            BlockSpawner *bs = &bspawners[i];
-            Block *base = &bs->base;
-            Vector2 basePosition = {base->rec.x, base->rec.y};
-
-            // Hover
-            base->hover = CheckCollisionPointRec(mouse.position, base->rec);
-            if (base->hover && mouse.hovering == NULL) {
-                mouse.hovering = base;
-            } else if (mouse.hovering == base && !base->hover) {
-                mouse.hovering = NULL;
-            }
-
-            // Holding e Dragging
-            if (mouse.hovering == base && IsMouseButtonPressed(0) && mouse.holding == NULL) {
-                // Obtem posição do mouse relativa ao retângulo
-                mouse.offset = Vector2Subtract(mouse.position, basePosition);
-                // Cria um novo bloco
-                bs->block = spawnBlock(blocks, &num_blocks, base->text, Vector2Add(basePosition, (Vector2){20,20}));
-                if (bs->block != NULL) {
-                    mouse.holding = bs->block;
-                    bs->block->dragging = true;
-                }
-            }
-        }
-
-        // Update da colisão entre Mouse / Blocos
-        // TODO: Consertar a seleção de blocos que são desenhados em cima do outro, mas que não seguem essa ordem para seleção
-        for (int i = 0; i < num_blocks; i++) {
-            Block *b = &blocks[i];
-            Vector2 blockPosition = {b->rec.x, b->rec.y};
-
-            // Hover
-            b->hover = CheckCollisionPointRec(mouse.position, b->rec);
-            if (b->hover && mouse.hovering == NULL) {
-                mouse.hovering = b;
-            } else if (mouse.hovering == b && !b->hover) {
-                mouse.hovering = NULL;
-            }
-
-            // Holding e Dragging
-            if (mouse.hovering == b && IsMouseButtonPressed(0) && mouse.holding == NULL) {
-                // Obtem posição do mouse relativa ao retângulo
-                mouse.offset = Vector2Subtract(mouse.position, blockPosition);
-                mouse.holding = b;
-                b->dragging = true;
-            }
-
-            // Movimento do bloco
-            if (b->dragging && IsMouseButtonDown(0)) {
-                // Usando o offset, move o bloco selecionado
-                blockPosition = Vector2Subtract(mouse.position, mouse.offset);
-                b->rec.x = blockPosition.x;
-                b->rec.y = blockPosition.y;
-            }
-
-            // Soltar o mouse
-            if (IsMouseButtonReleased(0)) {
-                mouse.holding = NULL;
-                b->dragging = false;
-            };
-        }
+        updateMouseCampos(&mouse, bfields, &num_bfields);
+        updateMouseGeradores(&mouse, blocks, &num_blocks, bspawners, &num_bspawners);
+        updateMouseBlocos(&mouse, blocks, &num_blocks);
 
         // Update da Cãmera
         camera.zoom += ((float)GetMouseWheelMove()*0.05f);
@@ -330,7 +341,7 @@ int main(void)
             ClearBackground(LIGHTGRAY);
             
             // Desenha geradores de blocos
-            for (int i = 0; i < num_bspawner; i++) {
+            for (int i = 0; i < num_bspawners; i++) {
                 DrawBlockSpawner(&bspawners[i], mouse.holding, mouse.hovering);
             }
 
@@ -366,7 +377,7 @@ int main(void)
             posY -= dist_linhas;
             GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
             if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
-                spawnBlock(blocks, &num_blocks, text_block, (Vector2){(int)(GetScreenWidth())/2, rand() % (int)(GetScreenWidth())});
+                spawnBlock(blocks, &num_blocks, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});
             }
             // 3
             posY -= dist_linhas;
