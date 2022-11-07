@@ -227,25 +227,20 @@ void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSp
 
 void updateMouseBlocos(Mouse *mouse, Block blocks[], int *num_blocks) {
     // Update da colisão entre Mouse / Blocos
-    // TODO: Consertar a seleção de blocos que são desenhados em cima do outro, mas que não seguem essa ordem para seleção
+    int nHover = -1;
+
     for (int i = 0; i < *num_blocks; i++) {
         Block *b = &blocks[i];
         Vector2 blockPosition = {b->rec.x, b->rec.y};
 
         // Hover
         b->hover = CheckCollisionPointRec(mouse->position, b->rec);
-        if (b->hover && mouse->hovering == NULL) {
+        if (b->hover && mouse->holding == NULL) {
+            nHover = i; // Marcamos o bloco mais a frente que colide com o mouse
             mouse->hovering = b;
         } else if (mouse->hovering == b && !b->hover) {
+            nHover = -1;
             mouse->hovering = NULL;
-        }
-
-        // Holding e Dragging
-        if (mouse->hovering == b && IsMouseButtonPressed(0) && mouse->holding == NULL) {
-            // Obtem posição do mouse relativa ao retângulo
-            mouse->offset = Vector2Subtract(mouse->position, blockPosition);
-            mouse->holding = b;
-            b->dragging = true;
         }
 
         // Movimento do bloco
@@ -261,6 +256,18 @@ void updateMouseBlocos(Mouse *mouse, Block blocks[], int *num_blocks) {
             mouse->holding = NULL;
             b->dragging = false;
         };
+    }
+
+    // Dragging
+    if (nHover != -1) {
+        Block *b = &blocks[nHover]; // bloco selecionado
+        if (IsMouseButtonPressed(0) && mouse->holding == NULL) {
+            // Obtem posição do mouse relativa ao retângulo
+            Vector2 blockPosition = (Vector2){b->rec.x, b->rec.y};
+            mouse->offset = Vector2Subtract(mouse->position, blockPosition);
+            mouse->holding = b;
+            b->dragging = true;
+        }
     }
 }
 
@@ -341,28 +348,21 @@ int main(void)
             ClearBackground(LIGHTGRAY);
             
             // Desenha geradores de blocos
-            for (int i = 0; i < num_bspawners; i++) {
-                DrawBlockSpawner(&bspawners[i], mouse.holding, mouse.hovering);
-            }
-
+            for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], mouse.holding, mouse.hovering); }
             // Desenha os blocos
-            for (int i = 0; i < num_blocks; i++) {
-                DrawBlock(&blocks[i], mouse.holding, mouse.hovering);
-            }
-
+            for (int i = 0; i < num_blocks; i++) { DrawBlock(&blocks[i], mouse.holding, mouse.hovering); }
             // Desenha os campos
-            for (int i = 0; i < num_bfields; i++) {
-                DrawBlockField(&bfields[i]);
-            }
+            for (int i = 0; i < num_bfields; i++) { DrawBlockField(&bfields[i]); }
 
             BeginMode2D(camera);
-
-
+            // 1. Begin 2D
+            // 2. ???
+            // 3. Profit
             EndMode2D();
 
             // Draw Controles GUI e Debugging
             // ------------------------------------------------------------------------------
-                // Ver https://raylibtech.itch.io/rguiicons para ID dos ícones
+            // Ver https://raylibtech.itch.io/rguiicons para ID dos ícones
             float posX = screenWidth - 200; float posY = screenHeight - 50;
             float dist_linhas = 25;
             DrawFPS(10, 10);
