@@ -169,26 +169,24 @@ void updateMouseCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
     // Update da colisão entre Mouse / Campos de Bloco
     // Quando um mouse está segurando um bloco e para em cima de um campo, esse
     // campo deve acomodar o bloco. 
-    // TODO: Potencialmente alterar esse comportamento pro mouse não precisar estar
-    //       exatamente em cima, ou uma colisão levando em conta o rec do bloco tbm
-    for (int i = 0; i < *num_bfields; i++) {
-        BlockField *bf = &bfields[i];
-        if ((bf->block == NULL || bf->block == mouse->holding) && mouse->holding != NULL && CheckCollisionPointRec(mouse->position, bf->rec) && IsMouseButtonReleased(0)) {
-                // É importante que essa parte de código seja executada antes do `holding = NULL;` lá embaixo
-                // TODO: Refatorar isso? Updates do mouse antes de tudo talvez, atualizar holding, hovering depois de tudo
+
+    // Um bloco acabou de ser solto?
+    if (IsMouseButtonReleased(0)) {
+        for (int i = 0; i < *num_bfields; i++) {
+            // Para cada campo, verificar se foi solto na sua posição
+            BlockField *bf = &bfields[i];
+            if (CheckCollisionPointRec(mouse->position, bf->rec)
+                && mouse->holding != NULL
+                && bf->block == NULL) {
                 bf->block = mouse->holding;
-                // Move o bloco para o campo
+                // Move bloco para o campo
                 bf->block->rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
                 bf->block->rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
-                // Ajusta tamanho do campo
+                // Ajusta o tamanho do campo
                 bf->rec.width = bf->block->rec.width  + BLOCK_FIELD_PADDING * 2;
-            }
-        if (bf->block != NULL) {
-            // O bloco está no lugar certo? Se o botão do mouse estiver pressionado, esperamos o usuário terminar a ação dele
-            if ((bf->block->rec.x != bf->rec.x + BLOCK_FIELD_PADDING || 
-                bf->block->rec.y != bf->rec.y + BLOCK_FIELD_PADDING) &&
-                !IsMouseButtonDown(0)) 
-            {
+                // Retira dragging
+                bf->block->dragging = false;
+            } else if (mouse->holding == bf->block) {
                 bf->block = NULL;
                 bf->rec.width = bf->rec.height;
             }
@@ -229,11 +227,16 @@ void updateMouseBlocos(Mouse *mouse, Block blocks[], int *num_blocks) {
     // Update da colisão entre Mouse / Blocos
     int nHover = -1;
 
+    bool mouseSolto = IsMouseButtonReleased(0);
+    if (mouseSolto) {
+        mouse->holding = NULL;
+    }
+
     for (int i = 0; i < *num_blocks; i++) {
         Block *b = &blocks[i];
         Vector2 blockPosition = {b->rec.x, b->rec.y};
 
-        // Hover
+        // Determinando qual o bloco selecionado
         b->hover = CheckCollisionPointRec(mouse->position, b->rec);
         if (b->hover && mouse->holding == NULL) {
             nHover = i; // Marcamos o bloco mais a frente que colide com o mouse
@@ -243,22 +246,20 @@ void updateMouseBlocos(Mouse *mouse, Block blocks[], int *num_blocks) {
             mouse->hovering = NULL;
         }
 
-        // Movimento do bloco
-        if (b->dragging && IsMouseButtonDown(0)) {
+        // Se o bloco está sendo arrastado, mover
+        if (b->dragging) {
             // Usando o offset, move o bloco selecionado
             blockPosition = Vector2Subtract(mouse->position, mouse->offset);
             b->rec.x = blockPosition.x;
             b->rec.y = blockPosition.y;
         }
 
-        // Soltar o mouse
-        if (IsMouseButtonReleased(0)) {
-            mouse->holding = NULL;
+        // Se o mouse foi solto, resetar todos os blocos
+        if (mouseSolto) {
             b->dragging = false;
-        };
+        }
     }
 
-    // Dragging
     if (nHover != -1) {
         Block *b = &blocks[nHover]; // bloco selecionado
         if (IsMouseButtonPressed(0) && mouse->holding == NULL) {
