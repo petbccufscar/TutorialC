@@ -145,6 +145,25 @@ void DrawBlockField(BlockField *bf) {
     DrawRectangleRoundedLines(bf->rec, roundness, segments, lineThick, MAROON);
 }
 
+typedef struct Mouse {
+    Vector2 position;
+    Vector2 offset;
+    Block *holding;
+    Block *hovering;
+    Color color;
+} Mouse;
+
+Mouse newMouse() {
+    Mouse m = {
+        .position = {-100.0f, -100.0f},
+        .offset = {0.0f, 0.0f},
+        .holding = NULL,
+        .hovering = NULL,
+        .color = MAROON
+    };
+    return m;
+}
+
 int main(void)
 {
     // Janela
@@ -154,13 +173,7 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "Tutorial C");
 
     // Indicador do mouse
-    Vector2 mousePosition = {-100.0f, -100.0f};
-    Vector2 offset = {0.0f, 0.0f};
-    Block *holding = NULL;
-    Block *hovering = NULL;
-    Color mouseIndicatorColor = DARKPURPLE;
-
-    Vector2 initialMousePosition = GetMousePosition();
+    Mouse mouse = newMouse();
 
     // Blocos e inicialização
     int num_blocks = 0; // Número de blocos no momento
@@ -200,7 +213,7 @@ int main(void)
         // Update
         //----------------------------------------------------------------------------------
         float deltaTime = GetFrameTime();
-        mousePosition = GetMousePosition();
+        mouse.position = GetMousePosition();
 
         // Update da colisão entre Mouse / Campos de Bloco
         // Quando um mouse está segurando um bloco e para em cima de um campo, esse
@@ -209,10 +222,10 @@ int main(void)
         //       exatamente em cima, ou uma colisão levando em conta o rec do bloco tbm
         for (int i = 0; i < num_bfields; i++) {
             BlockField *bf = &bfields[i];
-            if ((bf->block == NULL || bf->block == holding) && holding != NULL && CheckCollisionPointRec(mousePosition, bf->rec) && IsMouseButtonReleased(0)) {
+            if ((bf->block == NULL || bf->block == mouse.holding) && mouse.holding != NULL && CheckCollisionPointRec(mouse.position, bf->rec) && IsMouseButtonReleased(0)) {
                     // É importante que essa parte de código seja executada antes do `holding = NULL;` lá embaixo
                     // TODO: Refatorar isso? Updates do mouse antes de tudo talvez, atualizar holding, hovering depois de tudo
-                    bf->block = holding;
+                    bf->block = mouse.holding;
                     // Move o bloco para o campo
                     bf->block->rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
                     bf->block->rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
@@ -238,21 +251,21 @@ int main(void)
             Vector2 basePosition = {base->rec.x, base->rec.y};
 
             // Hover
-            base->hover = CheckCollisionPointRec(mousePosition, base->rec);
-            if (base->hover && hovering == NULL) {
-                hovering = base;
-            } else if (hovering == base && !base->hover) {
-                hovering = NULL;
+            base->hover = CheckCollisionPointRec(mouse.position, base->rec);
+            if (base->hover && mouse.hovering == NULL) {
+                mouse.hovering = base;
+            } else if (mouse.hovering == base && !base->hover) {
+                mouse.hovering = NULL;
             }
 
             // Holding e Dragging
-            if (hovering == base && IsMouseButtonPressed(0) && holding == NULL) {
+            if (mouse.hovering == base && IsMouseButtonPressed(0) && mouse.holding == NULL) {
                 // Obtem posição do mouse relativa ao retângulo
-                offset = Vector2Subtract(mousePosition, basePosition);
+                mouse.offset = Vector2Subtract(mouse.position, basePosition);
                 // Cria um novo bloco
                 bs->block = spawnBlock(blocks, &num_blocks, base->text, Vector2Add(basePosition, (Vector2){20,20}));
                 if (bs->block != NULL) {
-                    holding = bs->block;
+                    mouse.holding = bs->block;
                     bs->block->dragging = true;
                 }
             }
@@ -265,32 +278,32 @@ int main(void)
             Vector2 blockPosition = {b->rec.x, b->rec.y};
 
             // Hover
-            b->hover = CheckCollisionPointRec(mousePosition, b->rec);
-            if (b->hover && hovering == NULL) {
-                hovering = b;
-            } else if (hovering == b && !b->hover) {
-                hovering = NULL;
+            b->hover = CheckCollisionPointRec(mouse.position, b->rec);
+            if (b->hover && mouse.hovering == NULL) {
+                mouse.hovering = b;
+            } else if (mouse.hovering == b && !b->hover) {
+                mouse.hovering = NULL;
             }
 
             // Holding e Dragging
-            if (hovering == b && IsMouseButtonPressed(0) && holding == NULL) {
+            if (mouse.hovering == b && IsMouseButtonPressed(0) && mouse.holding == NULL) {
                 // Obtem posição do mouse relativa ao retângulo
-                offset = Vector2Subtract(mousePosition, blockPosition);
-                holding = b;
+                mouse.offset = Vector2Subtract(mouse.position, blockPosition);
+                mouse.holding = b;
                 b->dragging = true;
             }
 
             // Movimento do bloco
             if (b->dragging && IsMouseButtonDown(0)) {
                 // Usando o offset, move o bloco selecionado
-                blockPosition = Vector2Subtract(mousePosition, offset);
+                blockPosition = Vector2Subtract(mouse.position, mouse.offset);
                 b->rec.x = blockPosition.x;
                 b->rec.y = blockPosition.y;
             }
 
             // Soltar o mouse
             if (IsMouseButtonReleased(0)) {
-                holding = NULL;
+                mouse.holding = NULL;
                 b->dragging = false;
             };
         }
@@ -318,12 +331,12 @@ int main(void)
             
             // Desenha geradores de blocos
             for (int i = 0; i < num_bspawner; i++) {
-                DrawBlockSpawner(&bspawners[i], holding, hovering);
+                DrawBlockSpawner(&bspawners[i], mouse.holding, mouse.hovering);
             }
 
             // Desenha os blocos
             for (int i = 0; i < num_blocks; i++) {
-                DrawBlock(&blocks[i], holding, hovering);
+                DrawBlock(&blocks[i], mouse.holding, mouse.hovering);
             }
 
             // Desenha os campos
@@ -363,10 +376,10 @@ int main(void)
             // Indicador do mouse
             if (drawMouseIndicator){
                 float radius = 5.0f;
-                if (hovering != NULL) radius = 8.0f;
-                if (holding != NULL) radius = 4.0f;
-                DrawCircleV(mousePosition, radius, LIGHTGRAY);
-                DrawCircleV(mousePosition, radius-2, mouseIndicatorColor);
+                if (mouse.hovering != NULL) radius = 8.0f;
+                if (mouse.holding != NULL) radius = 4.0f;
+                DrawCircleV(mouse.position, radius, LIGHTGRAY);
+                DrawCircleV(mouse.position, radius-2, mouse.color);
             }
 
         EndDrawing();
