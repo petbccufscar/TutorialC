@@ -164,6 +164,74 @@ Mouse newMouse() {
     return m;
 }
 
+// Precisamos de uma estrutura que permita remoção de blocos fora de ordem
+// Como não teremos blocos sobrevivendo "sozinhos" (Sempre estarão ou acoplados
+// a um gerador ou campo) acho que não vai causar muitos problemas... espero
+typedef struct bNode { // Block Node
+    Block block;
+    bNode *next;
+    bNode *prev;
+} bNode;
+
+typedef struct bList {
+    bNode *head;
+    bNode *end;
+    size_t size;
+} bList;
+
+bList* newBList() {
+    bList *new = malloc(sizeof (bList));
+    new->end = NULL;
+    new->head = NULL;
+    new->size = 0;
+    return new;
+}
+
+bNode* newBNode(bNode *prev, Block b, bNode *next) {
+    bNode *new = malloc(sizeof (bNode));
+    new->block = b;
+    new->prev = prev;
+    new->next = next;
+    return new;
+}
+
+// Remove nó com base no seu ponteiro
+// TODO: lidar com a bList, que esqueci
+bool removeBNode(bNode *node) {
+    if (node->prev == NULL && node->next == NULL) {
+    // Único nó da lista
+        free(node);
+    } else if (node->next == NULL) {
+    // Último nó da lista
+        node->prev->next = NULL;
+        free(node);
+    } else if (node->prev == NULL) {
+    // Primeiro nó da lista
+        node->next->prev = NULL;
+        free(node);
+    } else {
+    // Nó no meio da lista
+        node->prev->next = node->next;
+        node->next->prev = node->prev;
+        free(node);
+    }
+}
+
+// Adiciona um nó na lista (Final da lista)
+bNode* addBNode(bList *list, Block b) {
+    // Lista vazia
+    if (list->head == NULL) {
+        bNode *new = newBNode(NULL, b, NULL);
+        list->head = new;
+        list->end = new;
+        list->size++;
+    } else {
+
+    }
+    // Lista com >=1 nó
+
+}
+
 // Funções de Atualização
 void updateMouseCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
     // Update da colisão entre Mouse / Campos de Bloco
