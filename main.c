@@ -121,6 +121,7 @@ bNode* addBNode(bList *list, Block b) {
         list->size++;
     } else {
         bNode *new = newBNode(NULL, b, NULL);
+        list->end->next = new;
         list->end = new;
         list->size++;
     }
@@ -309,13 +310,13 @@ void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSp
 void updateMouseBlocos(Mouse *mouse, bList *list) {
     bNode *lastHover = NULL;
 
-    bool mouseReleased = IsMouseButtonReleased;
+    bool mouseReleased = IsMouseButtonReleased(0);
     if (mouseReleased) {
         mouse->holding = NULL;
     }
 
     bNode *n = list->head; // Nó atual
-    while(list->end != n) {
+    while(n != NULL) {
         Block *b = &n->block;
         Vector2 blockPosition = {b->rec.x, b->rec.y};
 
@@ -337,6 +338,11 @@ void updateMouseBlocos(Mouse *mouse, bList *list) {
             b->rec.y = blockPosition.y;
         }
         n = n->next;
+
+        // Se o mouse foi solto, resetar todos os blocos
+        if (mouseReleased) {
+            b->dragging = false;
+        }
     }
 
     if (lastHover != NULL) {
@@ -483,8 +489,11 @@ int main(void)
             for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], mouse.holding, mouse.hovering); }
             // Desenha os blocos
             // for (int i = 0; i < num_blocks; i++) { DrawBlock(&blocks[i], mouse.holding, mouse.hovering); }
-            bNode *node = NULL;
-            while (node != blocos->head) { DrawBlock(&node->block, mouse.holding, mouse.hovering); }
+            bNode *node = blocos->head;
+            while (node != NULL) {
+                DrawBlock(&node->block, mouse.holding, mouse.hovering); 
+                node = node->next;
+            }
             // Desenha os campos
             for (int i = 0; i < num_bfields; i++) { DrawBlockField(&bfields[i]); }
 
