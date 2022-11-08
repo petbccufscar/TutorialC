@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <locale.h>
 #include "raylib.h"
 #include "raymath.h"
 
@@ -16,7 +17,7 @@
 
 // Blocos Arrastáveis
 #define NUM_BLOCKS 50 // Máximo de blocos que podem existir
-#define MAX_TEXT_BLOCK 30 // Tamanho máximo do texto de cada bloco
+#define MAX_TEXT_BLOCK 255 // Tamanho máximo do texto de cada bloco (Nota: Se o texto está bugando com acentos, deve ser isso)
 #define FONT_SIZE 20 // Tamanho do texto
 #define BLOCK_TEXT_PADDING 8 // Padding entre o bloco e o texto no meio
 // Campo de Bloco
@@ -25,6 +26,8 @@
 // Geradores de Blocos
 #define NUM_BLOCK_SPAWNER 50 // Máximo de geradores de blocos
 
+// ---------------------------------------------------------------------------------------------------
+// Estruturas
 // Bloco Arrastável
 typedef struct Block {
     char text[MAX_TEXT_BLOCK + 1];
@@ -33,6 +36,46 @@ typedef struct Block {
     bool dragging;
 } Block;
 
+// Precisamos de uma estrutura que permita remoção de blocos fora de ordem
+// Como não teremos blocos sobrevivendo "sozinhos" (Sempre estarão ou acoplados
+// a um gerador ou campo) acho que não vai causar muitos problemas... espero
+typedef struct bNode { // Block Node
+    Block block;
+    struct bNode *next;
+    struct bNode *prev;
+    bool owned;
+    bool permanent;
+} bNode;
+
+typedef struct bList {
+    bNode *head;
+    bNode *end;
+    size_t size;
+} bList;
+
+typedef struct Mouse {
+    Vector2 position;
+    Vector2 offset;
+    bNode *holding;
+    bNode *hovering;
+    Color color;
+} Mouse;
+
+// Gerador de Bloco
+typedef struct BlockSpawner {
+    bNode base;
+    bNode *node;
+} BlockSpawner;
+
+// Campo de bloco
+typedef struct BlockField {
+    bNode *node; 
+    Rectangle rec;
+} BlockField;
+
+
+// ---------------------------------------------------------------------------------------------------
+// Funções de criação e deleção
 Block newBlock(char text[], Vector2 position) {
     float width = MeasureText(text, FONT_SIZE) + BLOCK_TEXT_PADDING * 2;
     float height = FONT_SIZE + BLOCK_TEXT_PADDING * 2;
@@ -56,21 +99,6 @@ Block newBlock(char text[], Vector2 position) {
     return b;
 }
 
-// Precisamos de uma estrutura que permita remoção de blocos fora de ordem
-// Como não teremos blocos sobrevivendo "sozinhos" (Sempre estarão ou acoplados
-// a um gerador ou campo) acho que não vai causar muitos problemas... espero
-typedef struct bNode { // Block Node
-    Block block;
-    struct bNode *next;
-    struct bNode *prev;
-} bNode;
-
-typedef struct bList {
-    bNode *head;
-    bNode *end;
-    size_t size;
-} bList;
-
 bList* newBList() {
     bList *new = malloc(sizeof (bList));
     new->end = NULL;
@@ -84,11 +112,28 @@ bNode* newBNode(bNode *prev, Block b, bNode *next) {
     new->block = b;
     new->prev = prev;
     new->next = next;
+    new->owned = true;
+    new->permanent = false;
     return new;
 }
 
+Mouse newMouse() {
+    Mouse m = {
+        .position = {-100.0f, -100.0f},
+        .offset = {0.0f, 0.0f},
+        .holding = NULL,
+        .hovering = NULL,
+        .color = MAROON
+    };
+    return m;
+}
+
 // Remove nó com base no seu ponteiro
-bool removeBNode(bList *list, bNode *node) {
+bool removeBNode(Mouse *mouse, bList *list, bNode *node) {
+    // Removendo referências que o mouse pode ter do node
+    if (mouse->holding == node) { mouse->holding = NULL; }
+    if (mouse->hovering == node) { mouse->hovering = NULL; }
+
     if (list->head == node && list->end == node) {
     // Único nó da lista
         list->end = NULL;
@@ -126,6 +171,7 @@ bNode* addBNode(bList *list, Block b) {
         list->end = new;
         list->size++;
     } else {
+        new->prev = list->end;
         list->end->next = new;
         list->end = new;
         list->size++;
@@ -133,77 +179,19 @@ bNode* addBNode(bList *list, Block b) {
     return new;
 }
 
-bNode* spawnBNode(bList *list, char text[], Vector2 position) {
-    Block b = newBlock(text, position);
-    return addBNode(list, b);
-}
-
-// // Usar spawnBNode no lugar
-// Block* spawnBlockOld(Block *arr, int *num_blocks, char text[], Vector2 position) {
-//     if (*num_blocks >= NUM_BLOCKS) {
-//         printf("Não foi possível gerar um novo bloco, máximo (%d) atingido\n", NUM_BLOCKS);
-//         return NULL; // Não é possível gerar mais blocos
-//     } else {
-//         arr[*num_blocks] = newBlock(text, position);
-//         return &arr[(*num_blocks)++]; // Retorna num_blocks e depois aumenta o valor
-//     }
-// }
-
-// TODO: Alterar pra receber bNodes ao invés de Blocks
-void DrawBlock(Block *b, Block *holding, Block *hovering) {
-    Color textColor = MAROON;
-    int segments = 50; float roundness = 0.4f; float lineThick = 2.0f;
-    DrawRectangleRoundedLines(b->rec, roundness, segments, lineThick, DARKGRAY); // Outline
-    DrawRectangleRounded(b->rec, roundness, segments, LIGHTGRAY); // Preenchimento sólido
-    if (holding == b) {
-        DrawRectangleRounded(b->rec, roundness, segments, MAROON); // Preenchimento segurando
-        textColor = WHITE;
-    } else if (hovering == b) {
-        DrawRectangleRounded(b->rec, roundness, segments, DARKGRAY); // Preenchimento hovering
-        textColor = WHITE;
-    };
-    DrawText(b->text, (int)b->rec.x + BLOCK_TEXT_PADDING, (int)b->rec.y + BLOCK_TEXT_PADDING, FONT_SIZE, textColor); // Texto
-}
-
-// Gerador de Bloco
-typedef struct BlockSpawner {
-    bNode base;
-    bNode *node;
-} BlockSpawner;
-
 BlockSpawner newBlockSpawner(Block base) {
     BlockSpawner bs = {
         .base = (bNode){
             base,
             NULL,
-            NULL
+            NULL,
+            true,
+            true
         },
         .node = NULL,
     };
     return bs;
 }
-
-bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base) {
-    if (*num_bspawners >= NUM_BLOCK_SPAWNER) {
-        printf("Não foi possível gerar um novo gerador de blocos, máximo (%d) atingido\n", NUM_BLOCK_SPAWNER);
-        return false; // Não é possível gerar mais blocos
-    } else {
-        arr[*num_bspawners] = newBlockSpawner(base);
-        *num_bspawners += 1;
-        return true;
-    }
-}
-
-// TODO: Alterar pra receber bNodes ao invés de Blocks
-void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering) {
-    DrawBlock(&bf->base.block, holding, hovering);
-}
-
-// Campo de bloco
-typedef struct BlockField {
-    bNode *node; 
-    Rectangle rec;
-} BlockField;
 
 BlockField newBlockField() {
     // Dimensões iniciais
@@ -224,6 +212,24 @@ BlockField newBlockField() {
     return bf;
 }
 
+// ---------------------------------------------------------------------------------------------------
+// Funções de Spawn
+bNode* spawnBNode(bList *list, char text[], Vector2 position) {
+    Block b = newBlock(text, position);
+    return addBNode(list, b);
+}
+
+bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base) {
+    if (*num_bspawners >= NUM_BLOCK_SPAWNER) {
+        printf("Não foi possível gerar um novo gerador de blocos, máximo (%d) atingido\n", NUM_BLOCK_SPAWNER);
+        return false; // Não é possível gerar mais blocos
+    } else {
+        arr[*num_bspawners] = newBlockSpawner(base);
+        *num_bspawners += 1;
+        return true;
+    }
+}
+
 bool spawnBlockField(BlockField *arr, int *num_bfields) {
     if(*num_bfields >= NUM_BLOCK_FIELDS) {
         printf("Não foi possível gerar um novo campo, máximo (%d) atingido\n", NUM_BLOCK_FIELDS);
@@ -235,30 +241,37 @@ bool spawnBlockField(BlockField *arr, int *num_bfields) {
     }
 }
 
+
+// ---------------------------------------------------------------------------------------------------
+// Funções de desenho
+// TODO: Alterar pra receber bNodes ao invés de Blocks
+void DrawBlock(Block *b, Block *holding, Block *hovering) {
+    Color textColor = MAROON;
+    int segments = 50; float roundness = 0.4f; float lineThick = 2.0f;
+    DrawRectangleRoundedLines(b->rec, roundness, segments, lineThick, DARKGRAY); // Outline
+    DrawRectangleRounded(b->rec, roundness, segments, LIGHTGRAY); // Preenchimento sólido
+    if (holding == b) {
+        DrawRectangleRounded(b->rec, roundness, segments, MAROON); // Preenchimento segurando
+        textColor = WHITE;
+    } else if (hovering == b) {
+        DrawRectangleRounded(b->rec, roundness, segments, DARKGRAY); // Preenchimento hovering
+        textColor = WHITE;
+    };
+    DrawText(b->text, (int)b->rec.x + BLOCK_TEXT_PADDING, (int)b->rec.y + BLOCK_TEXT_PADDING, FONT_SIZE, textColor); // Texto
+}
+
+// TODO: Alterar pra receber bNodes ao invés de Blocks
+void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering) {
+    DrawBlock(&bf->base.block, holding, hovering);
+}
+
 void DrawBlockField(BlockField *bf) {
     int segments = 50; float roundness = 0.4f; float lineThick = 1.0f;
     DrawRectangleRoundedLines(bf->rec, roundness, segments, lineThick, MAROON);
 }
 
-typedef struct Mouse {
-    Vector2 position;
-    Vector2 offset;
-    bNode *holding;
-    bNode *hovering;
-    Color color;
-} Mouse;
 
-Mouse newMouse() {
-    Mouse m = {
-        .position = {-100.0f, -100.0f},
-        .offset = {0.0f, 0.0f},
-        .holding = NULL,
-        .hovering = NULL,
-        .color = MAROON
-    };
-    return m;
-}
-
+// ---------------------------------------------------------------------------------------------------
 // Funções de Atualização
 // Update da colisão entre Mouse / Campos de Bloco
 void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
@@ -272,7 +285,7 @@ void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
             BlockField *bf = &bfields[i];
             if (CheckCollisionPointRec(mouse->position, bf->rec)
                 && mouse->holding != NULL
-                && bf->node == NULL) {
+                && (bf->node == NULL || bf->node == mouse->holding)) {
                 bf->node = mouse->holding;
                 // Move bloco para o campo
                 bf->node->block.rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
@@ -281,10 +294,20 @@ void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
                 bf->rec.width = bf->node->block.rec.width  + BLOCK_FIELD_PADDING * 2;
                 // Retira dragging
                 bf->node->block.dragging = false;
+                bf->node->owned = true;
             } else if (mouse->holding == bf->node) {
-                bf->node = NULL;
+                if (bf->node != NULL){
+                    bf->node = NULL;
+                }
                 bf->rec.width = bf->rec.height;
             }
+        }
+    }
+
+    for (int i = 0; i < *num_bfields; i++) {
+        BlockField *bf = &bfields[i];
+        if (bf->node != NULL) {
+            bf->node->owned = true;
         }
     }
 }
@@ -315,12 +338,16 @@ void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *n
                 mouse->holding = bs->node;
                 bs->node->block.dragging = true;
             }
-        }
+        }    
+
+        if (bs->node != NULL && mouse->holding == bs->node) {
+            bs->node->owned = true;
+        }    
     }
 }
 
 // Update da colisão entre Mouse / Blocos
-void updateBlocos(Mouse *mouse, bList *list) {
+void updateBNodes(Mouse *mouse, bList *list) {
     bNode *lastHover = NULL;
 
     bool mouseReleased = IsMouseButtonReleased(0);
@@ -350,12 +377,21 @@ void updateBlocos(Mouse *mouse, bList *list) {
             b->rec.x = blockPosition.x;
             b->rec.y = blockPosition.y;
         }
-        n = n->next;
 
         // Se o mouse foi solto, resetar todos os blocos
         if (mouseReleased) {
             b->dragging = false;
         }
+
+        if (!n->owned) {
+            removeBNode(mouse, list, n);
+        } else if (!n->permanent) {
+            // Exige que se confirme um dono pra próxima vez
+            n->owned = false;
+        }
+
+        // Avança o loop
+        n = n->next;
     }
 
     if (lastHover != NULL) {
@@ -395,9 +431,9 @@ int main(void)
     //       testes aqui    
     int num_bspawners = 0;
     BlockSpawner bspawners[NUM_BLOCK_SPAWNER];
-    Block bTeste = newBlock("Teste", (Vector2){20, 50});
+    Block bTeste = newBlock("Hahaha", (Vector2){20, 50});
     spawnBlockSpawner(bspawners, &num_bspawners, bTeste);
-    Block bTeste2 = newBlock("Teste 2", (Vector2){20, 100});
+    Block bTeste2 = newBlock("Só precisei mudar o código todo", (Vector2){20, 100});
     spawnBlockSpawner(bspawners, &num_bspawners, bTeste2);
 
     // Camera
@@ -420,9 +456,9 @@ int main(void)
         // float deltaTime = GetFrameTime();
         mouse.position = GetMousePosition();
 
-        updateCampos(&mouse, bfields, &num_bfields);
         updateGeradores(&mouse, blocos, bspawners, &num_bspawners);
-        updateBlocos(&mouse, blocos);
+        updateCampos(&mouse, bfields, &num_bfields);
+        updateBNodes(&mouse, blocos);
 
         // Update da Cãmera
         camera.zoom += ((float)GetMouseWheelMove()*0.05f);
@@ -480,7 +516,7 @@ int main(void)
             posY -= dist_linhas;
             GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
             if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
-                spawnBNode(blocos, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});
+                spawnBNode(blocos, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50})->permanent = true;
                 // spawnBlockOld(blocks, &num_blocks, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});
             }
             // 3
