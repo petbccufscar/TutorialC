@@ -149,6 +149,7 @@ bNode* spawnBNode(bList *list, char text[], Vector2 position) {
 //     }
 // }
 
+// TODO: Alterar pra receber bNodes ao invés de Blocks
 void DrawBlock(Block *b, Block *holding, Block *hovering) {
     Color textColor = MAROON;
     int segments = 50; float roundness = 0.4f; float lineThick = 2.0f;
@@ -166,14 +167,18 @@ void DrawBlock(Block *b, Block *holding, Block *hovering) {
 
 // Gerador de Bloco
 typedef struct BlockSpawner {
-    Block base;
-    Block *block;
+    bNode base;
+    bNode *node;
 } BlockSpawner;
 
 BlockSpawner newBlockSpawner(Block base) {
     BlockSpawner bs = {
-        .base = base,
-        .block = NULL,
+        .base = (bNode){
+            base,
+            NULL,
+            NULL
+        },
+        .node = NULL,
     };
     return bs;
 }
@@ -189,13 +194,14 @@ bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base) {
     }
 }
 
+// TODO: Alterar pra receber bNodes ao invés de Blocks
 void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering) {
-    DrawBlock(&bf->base, holding, hovering);
+    DrawBlock(&bf->base.block, holding, hovering);
 }
 
 // Campo de bloco
 typedef struct BlockField {
-    Block *block; 
+    bNode *node; 
     Rectangle rec;
 } BlockField;
 
@@ -211,7 +217,7 @@ BlockField newBlockField() {
         .y = rand() % (int)(GetScreenHeight() - height)
     };
     BlockField bf = {
-        .block = NULL,
+        .node = NULL,
         .rec = rec
     };
 
@@ -237,8 +243,8 @@ void DrawBlockField(BlockField *bf) {
 typedef struct Mouse {
     Vector2 position;
     Vector2 offset;
-    Block *holding;
-    Block *hovering;
+    bNode *holding;
+    bNode *hovering;
     Color color;
 } Mouse;
 
@@ -266,17 +272,17 @@ void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
             BlockField *bf = &bfields[i];
             if (CheckCollisionPointRec(mouse->position, bf->rec)
                 && mouse->holding != NULL
-                && bf->block == NULL) {
-                bf->block = mouse->holding;
+                && bf->node == NULL) {
+                bf->node = mouse->holding;
                 // Move bloco para o campo
-                bf->block->rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
-                bf->block->rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
+                bf->node->block.rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
+                bf->node->block.rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
                 // Ajusta o tamanho do campo
-                bf->rec.width = bf->block->rec.width  + BLOCK_FIELD_PADDING * 2;
+                bf->rec.width = bf->node->block.rec.width  + BLOCK_FIELD_PADDING * 2;
                 // Retira dragging
-                bf->block->dragging = false;
-            } else if (mouse->holding == bf->block) {
-                bf->block = NULL;
+                bf->node->block.dragging = false;
+            } else if (mouse->holding == bf->node) {
+                bf->node = NULL;
                 bf->rec.width = bf->rec.height;
             }
         }
@@ -287,14 +293,14 @@ void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
 void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *num_bspawners) {
     for (int i = 0; i < *num_bspawners; i++) {
         BlockSpawner *bs = &bspawners[i];
-        Block *base = &bs->base;
-        Vector2 basePosition = {base->rec.x, base->rec.y};
+        bNode *base = &bs->base;
+        Vector2 basePosition = {base->block.rec.x, base->block.rec.y};
 
         // Hover
-        base->hover = CheckCollisionPointRec(mouse->position, base->rec);
-        if (base->hover && mouse->hovering == NULL) {
+        base->block.hover = CheckCollisionPointRec(mouse->position, base->block.rec);
+        if (base->block.hover && mouse->hovering == NULL) {
             mouse->hovering = base;
-        } else if (mouse->hovering == base && !base->hover) {
+        } else if (mouse->hovering == base && !base->block.hover) {
             mouse->hovering = NULL;
         }
 
@@ -303,11 +309,11 @@ void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *n
             // Obtem posição do mouse relativa ao retângulo
             mouse->offset = Vector2Subtract(mouse->position, basePosition);
             // Cria um novo bloco
-            bs->block = &spawnBNode(list, base->text, basePosition)->block;
-            if (bs->block != NULL) {
-                mouse->hovering = bs->block;
-                mouse->holding = bs->block;
-                bs->block->dragging = true;
+            bs->node = spawnBNode(list, base->block.text, basePosition);
+            if (bs->node != NULL) {
+                mouse->hovering = bs->node;
+                mouse->holding = bs->node;
+                bs->node->block.dragging = true;
             }
         }
     }
@@ -331,8 +337,8 @@ void updateBlocos(Mouse *mouse, bList *list) {
         b->hover = CheckCollisionPointRec(mouse->position, b->rec);
         if (b->hover && mouse->holding == NULL) {
             lastHover = n;
-            mouse->hovering = b;
-        } else if (mouse->hovering == b && !b->hover) {
+            mouse->hovering = n;
+        } else if (mouse->hovering == n && !b->hover) {
             lastHover = NULL;
             mouse->hovering = NULL;
         }
@@ -358,7 +364,7 @@ void updateBlocos(Mouse *mouse, bList *list) {
             // Obterm posição do mouse relativa ao retângulo
             Vector2 blockPosition = (Vector2){b->rec.x, b->rec.y};
             mouse->offset = Vector2Subtract(mouse->position, blockPosition);
-            mouse->holding = b;
+            mouse->holding = lastHover;
             b->dragging = true;
         }
     }
@@ -440,12 +446,12 @@ int main(void)
             ClearBackground(LIGHTGRAY);
             
             // Desenha geradores de blocos
-            for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], mouse.holding, mouse.hovering); }
+            for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], &mouse.holding->block, &mouse.hovering->block); }
             // Desenha os blocos
             // for (int i = 0; i < num_blocks; i++) { DrawBlock(&blocks[i], mouse.holding, mouse.hovering); }
             bNode *node = blocos->head;
             while (node != NULL) {
-                DrawBlock(&node->block, mouse.holding, mouse.hovering); 
+                DrawBlock(&node->block, &mouse.holding->block, &mouse.hovering->block); 
                 node = node->next;
             }
             // Desenha os campos
