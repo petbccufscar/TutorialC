@@ -50,7 +50,89 @@ Block newBlock(char text[], Vector2 position) {
     return b;
 }
 
-Block* spawnBlock(Block *arr, int *num_blocks, char text[], Vector2 position) {
+// Precisamos de uma estrutura que permita remoção de blocos fora de ordem
+// Como não teremos blocos sobrevivendo "sozinhos" (Sempre estarão ou acoplados
+// a um gerador ou campo) acho que não vai causar muitos problemas... espero
+typedef struct bNode { // Block Node
+    Block block;
+    struct bNode *next;
+    struct bNode *prev;
+} bNode;
+
+typedef struct bList {
+    bNode *head;
+    bNode *end;
+    size_t size;
+} bList;
+
+bList* newBList() {
+    bList *new = malloc(sizeof (bList));
+    new->end = NULL;
+    new->head = NULL;
+    new->size = 0;
+    return new;
+}
+
+bNode* newBNode(bNode *prev, Block b, bNode *next) {
+    bNode *new = malloc(sizeof (bNode));
+    new->block = b;
+    new->prev = prev;
+    new->next = next;
+    return new;
+}
+
+// Remove nó com base no seu ponteiro
+bool removeBNode(bList *list, bNode *node) {
+    if (list->head == node && list->end == node) {
+    // Único nó da lista
+        list->end = NULL;
+        list->head = NULL;
+        list->size = 0;
+        free(node);
+    } else if (list->end == node) {
+    // Último nó da lista
+        node->prev->next = NULL;
+        list->end = node->prev;
+        list->size--;
+        free(node);
+    } else if (list->head == node) {
+    // Primeiro nó da lista
+        node->next->prev = NULL;
+        list->head = node->next;
+        list->size--;
+        free(node);
+    } else {
+    // Nó no meio da lista
+        node->prev->next = node->next;
+        node->next->prev = node->prev;
+        list->size--;
+        free(node);
+    }
+    return true;
+}
+
+// Adiciona um nó na lista (Final da lista)
+bNode* addBNode(bList *list, Block b) {
+    // Lista vazia
+    if (list->head == NULL) {
+        bNode *new = newBNode(NULL, b, NULL);
+        list->head = new;
+        list->end = new;
+        list->size++;
+    } else {
+        bNode *new = newBNode(NULL, b, NULL);
+        list->end = new;
+        list->size++;
+    }
+}
+
+bNode* spawnBNode(bList *list, char text[], Vector2 position) {
+    Block b = newBlock(text, position);
+    return addBNode(list, b);
+}
+
+// Usar spawnBNode no lugar
+Block* spawnBlockOld(Block *arr, int *num_blocks, char text[], Vector2 position) {
     if (*num_blocks >= NUM_BLOCKS) {
         printf("Não foi possível gerar um novo bloco, máximo (%d) atingido\n", NUM_BLOCKS);
         return NULL; // Não é possível gerar mais blocos
@@ -164,77 +246,9 @@ Mouse newMouse() {
     return m;
 }
 
-// Precisamos de uma estrutura que permita remoção de blocos fora de ordem
-// Como não teremos blocos sobrevivendo "sozinhos" (Sempre estarão ou acoplados
-// a um gerador ou campo) acho que não vai causar muitos problemas... espero
-typedef struct bNode { // Block Node
-    Block block;
-    bNode *next;
-    bNode *prev;
-} bNode;
-
-typedef struct bList {
-    bNode *head;
-    bNode *end;
-    size_t size;
-} bList;
-
-bList* newBList() {
-    bList *new = malloc(sizeof (bList));
-    new->end = NULL;
-    new->head = NULL;
-    new->size = 0;
-    return new;
-}
-
-bNode* newBNode(bNode *prev, Block b, bNode *next) {
-    bNode *new = malloc(sizeof (bNode));
-    new->block = b;
-    new->prev = prev;
-    new->next = next;
-    return new;
-}
-
-// Remove nó com base no seu ponteiro
-// TODO: lidar com a bList, que esqueci
-bool removeBNode(bNode *node) {
-    if (node->prev == NULL && node->next == NULL) {
-    // Único nó da lista
-        free(node);
-    } else if (node->next == NULL) {
-    // Último nó da lista
-        node->prev->next = NULL;
-        free(node);
-    } else if (node->prev == NULL) {
-    // Primeiro nó da lista
-        node->next->prev = NULL;
-        free(node);
-    } else {
-    // Nó no meio da lista
-        node->prev->next = node->next;
-        node->next->prev = node->prev;
-        free(node);
-    }
-}
-
-// Adiciona um nó na lista (Final da lista)
-bNode* addBNode(bList *list, Block b) {
-    // Lista vazia
-    if (list->head == NULL) {
-        bNode *new = newBNode(NULL, b, NULL);
-        list->head = new;
-        list->end = new;
-        list->size++;
-    } else {
-
-    }
-    // Lista com >=1 nó
-
-}
-
 // Funções de Atualização
+// Update da colisão entre Mouse / Campos de Bloco
 void updateMouseCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
-    // Update da colisão entre Mouse / Campos de Bloco
     // Quando um mouse está segurando um bloco e para em cima de um campo, esse
     // campo deve acomodar o bloco. 
 
@@ -262,8 +276,8 @@ void updateMouseCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
     }
 }
 
+// Update da colisão Mouse / Gerador de Blocos
 void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSpawner bspawners[], int *num_bspawners) {
-    // Update da colisão Mouse / Gerador de Blocos
     for (int i = 0; i < *num_bspawners; i++) {
         BlockSpawner *bs = &bspawners[i];
         Block *base = &bs->base;
@@ -282,7 +296,7 @@ void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSp
             // Obtem posição do mouse relativa ao retângulo
             mouse->offset = Vector2Subtract(mouse->position, basePosition);
             // Cria um novo bloco
-            bs->block = spawnBlock(blocks, num_blocks, base->text, Vector2Add(basePosition, (Vector2){20,20}));
+            bs->block = spawnBlockOld(blocks, num_blocks, base->text, Vector2Add(basePosition, (Vector2){20,20}));
             if (bs->block != NULL) {
                 mouse->holding = bs->block;
                 bs->block->dragging = true;
@@ -291,7 +305,54 @@ void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSp
     }
 }
 
-void updateMouseBlocos(Mouse *mouse, Block blocks[], int *num_blocks) {
+// Update da colisão entre Mouse / Blocos
+void updateMouseBlocos(Mouse *mouse, bList *list) {
+    bNode *lastHover = NULL;
+
+    bool mouseReleased = IsMouseButtonReleased;
+    if (mouseReleased) {
+        mouse->holding = NULL;
+    }
+
+    bNode *n = list->head; // Nó atual
+    while(list->end != n) {
+        Block *b = &n->block;
+        Vector2 blockPosition = {b->rec.x, b->rec.y};
+
+        // Ao fim do loop, deixa em lastHover o bloco que deve ser selecionado
+        b->hover = CheckCollisionPointRec(mouse->position, b->rec);
+        if (b->hover && mouse->holding == NULL) {
+            lastHover = n;
+            mouse->hovering = b;
+        } else if (mouse->hovering == b && !b->hover) {
+            lastHover = NULL;
+            mouse->hovering = NULL;
+        }
+
+        // Se o bloco está sendo arrastado, mover
+        if (b->dragging) {
+            // Usando o offset, move o bloco selecionado
+            blockPosition = Vector2Subtract(mouse->position, mouse->offset);
+            b->rec.x = blockPosition.x;
+            b->rec.y = blockPosition.y;
+        }
+        n = n->next;
+    }
+
+    if (lastHover != NULL) {
+        Block *b = &lastHover->block;
+        if (IsMouseButtonPressed(0) && mouse->holding == NULL) {
+            // Obterm posição do mouse relativa ao retângulo
+            Vector2 blockPosition = (Vector2){b->rec.x, b->rec.y};
+            mouse->offset = Vector2Subtract(mouse->position, blockPosition);
+            mouse->holding = b;
+            b->dragging = true;
+        }
+    }
+}
+
+// Usar updateMouseBlocos no lugar
+void updateMouseBlocosOld(Mouse *mouse, Block blocks[], int *num_blocks) {
     // Update da colisão entre Mouse / Blocos
     int nHover = -1;
 
@@ -355,6 +416,7 @@ int main(void)
     int num_blocks = 0; // Número de blocos no momento
     char text_block[MAX_TEXT_BLOCK] = "Teste!"; // Texto usado nos blocos, alterado pela GUI
     Block blocks[NUM_BLOCKS]; // TODO: Acho que vai precisar escrever uma lista ligada pra permitir a remoção de blocos... trabaio ein
+    bList *blocos = newBList(); // TODO: Nova lista ligada, remover aos poucos a antiga
 
     // Campos de Bloco e inicialização
     int num_bfields = 0; // Número de campos de bloco no momento
@@ -393,7 +455,8 @@ int main(void)
 
         updateMouseCampos(&mouse, bfields, &num_bfields);
         updateMouseGeradores(&mouse, blocks, &num_blocks, bspawners, &num_bspawners);
-        updateMouseBlocos(&mouse, blocks, &num_blocks);
+        // updateMouseBlocosOld(&mouse, blocks, &num_blocks);
+        updateMouseBlocos(&mouse, blocos);
 
         // Update da Cãmera
         camera.zoom += ((float)GetMouseWheelMove()*0.05f);
@@ -419,7 +482,9 @@ int main(void)
             // Desenha geradores de blocos
             for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], mouse.holding, mouse.hovering); }
             // Desenha os blocos
-            for (int i = 0; i < num_blocks; i++) { DrawBlock(&blocks[i], mouse.holding, mouse.hovering); }
+            // for (int i = 0; i < num_blocks; i++) { DrawBlock(&blocks[i], mouse.holding, mouse.hovering); }
+            bNode *node = NULL;
+            while (node != blocos->head) { DrawBlock(&node->block, mouse.holding, mouse.hovering); }
             // Desenha os campos
             for (int i = 0; i < num_bfields; i++) { DrawBlockField(&bfields[i]); }
 
@@ -446,7 +511,8 @@ int main(void)
             posY -= dist_linhas;
             GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
             if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
-                spawnBlock(blocks, &num_blocks, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});
+                spawnBNode(blocos, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});
+                // spawnBlockOld(blocks, &num_blocks, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});
             }
             // 3
             posY -= dist_linhas;
