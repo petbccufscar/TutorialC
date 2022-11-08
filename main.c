@@ -5,8 +5,14 @@
 
 // Essa livraria é "intended for tools development"
 // https://github.com/raysan5/raygui
+// Pragma pra ignorar warnings da biblioteca
 #define RAYGUI_IMPLEMENTATION
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include "raygui.h"
+#pragma GCC diagnostic pop
 
 // Blocos Arrastáveis
 #define NUM_BLOCKS 50 // Máximo de blocos que podem existir
@@ -114,17 +120,17 @@ bool removeBNode(bList *list, bNode *node) {
 // Adiciona um nó na lista (Final da lista)
 bNode* addBNode(bList *list, Block b) {
     // Lista vazia
+    bNode *new = newBNode(NULL, b, NULL);
     if (list->head == NULL) {
-        bNode *new = newBNode(NULL, b, NULL);
         list->head = new;
         list->end = new;
         list->size++;
     } else {
-        bNode *new = newBNode(NULL, b, NULL);
         list->end->next = new;
         list->end = new;
         list->size++;
     }
+    return new;
 }
 
 bNode* spawnBNode(bList *list, char text[], Vector2 position) {
@@ -132,16 +138,16 @@ bNode* spawnBNode(bList *list, char text[], Vector2 position) {
     return addBNode(list, b);
 }
 
-// Usar spawnBNode no lugar
-Block* spawnBlockOld(Block *arr, int *num_blocks, char text[], Vector2 position) {
-    if (*num_blocks >= NUM_BLOCKS) {
-        printf("Não foi possível gerar um novo bloco, máximo (%d) atingido\n", NUM_BLOCKS);
-        return NULL; // Não é possível gerar mais blocos
-    } else {
-        arr[*num_blocks] = newBlock(text, position);
-        return &arr[(*num_blocks)++]; // Retorna num_blocks e depois aumenta o valor
-    }
-}
+// // Usar spawnBNode no lugar
+// Block* spawnBlockOld(Block *arr, int *num_blocks, char text[], Vector2 position) {
+//     if (*num_blocks >= NUM_BLOCKS) {
+//         printf("Não foi possível gerar um novo bloco, máximo (%d) atingido\n", NUM_BLOCKS);
+//         return NULL; // Não é possível gerar mais blocos
+//     } else {
+//         arr[*num_blocks] = newBlock(text, position);
+//         return &arr[(*num_blocks)++]; // Retorna num_blocks e depois aumenta o valor
+//     }
+// }
 
 void DrawBlock(Block *b, Block *holding, Block *hovering) {
     Color textColor = MAROON;
@@ -249,7 +255,7 @@ Mouse newMouse() {
 
 // Funções de Atualização
 // Update da colisão entre Mouse / Campos de Bloco
-void updateMouseCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
+void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
     // Quando um mouse está segurando um bloco e para em cima de um campo, esse
     // campo deve acomodar o bloco. 
 
@@ -277,8 +283,8 @@ void updateMouseCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
     }
 }
 
-// Update da colisão Mouse / Gerador de Blocos
-void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSpawner bspawners[], int *num_bspawners) {
+// Update dos Geradores de Bloco
+void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *num_bspawners) {
     for (int i = 0; i < *num_bspawners; i++) {
         BlockSpawner *bs = &bspawners[i];
         Block *base = &bs->base;
@@ -297,8 +303,9 @@ void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSp
             // Obtem posição do mouse relativa ao retângulo
             mouse->offset = Vector2Subtract(mouse->position, basePosition);
             // Cria um novo bloco
-            bs->block = spawnBlockOld(blocks, num_blocks, base->text, Vector2Add(basePosition, (Vector2){20,20}));
+            bs->block = &spawnBNode(list, base->text, basePosition)->block;
             if (bs->block != NULL) {
+                mouse->hovering = bs->block;
                 mouse->holding = bs->block;
                 bs->block->dragging = true;
             }
@@ -307,7 +314,7 @@ void updateMouseGeradores(Mouse *mouse, Block blocks[], int *num_blocks, BlockSp
 }
 
 // Update da colisão entre Mouse / Blocos
-void updateMouseBlocos(Mouse *mouse, bList *list) {
+void updateBlocos(Mouse *mouse, bList *list) {
     bNode *lastHover = NULL;
 
     bool mouseReleased = IsMouseButtonReleased(0);
@@ -357,56 +364,6 @@ void updateMouseBlocos(Mouse *mouse, bList *list) {
     }
 }
 
-// Usar updateMouseBlocos no lugar
-void updateMouseBlocosOld(Mouse *mouse, Block blocks[], int *num_blocks) {
-    // Update da colisão entre Mouse / Blocos
-    int nHover = -1;
-
-    bool mouseSolto = IsMouseButtonReleased(0);
-    if (mouseSolto) {
-        mouse->holding = NULL;
-    }
-
-    for (int i = 0; i < *num_blocks; i++) {
-        Block *b = &blocks[i];
-        Vector2 blockPosition = {b->rec.x, b->rec.y};
-
-        // Determinando qual o bloco selecionado
-        b->hover = CheckCollisionPointRec(mouse->position, b->rec);
-        if (b->hover && mouse->holding == NULL) {
-            nHover = i; // Marcamos o bloco mais a frente que colide com o mouse
-            mouse->hovering = b;
-        } else if (mouse->hovering == b && !b->hover) {
-            nHover = -1;
-            mouse->hovering = NULL;
-        }
-
-        // Se o bloco está sendo arrastado, mover
-        if (b->dragging) {
-            // Usando o offset, move o bloco selecionado
-            blockPosition = Vector2Subtract(mouse->position, mouse->offset);
-            b->rec.x = blockPosition.x;
-            b->rec.y = blockPosition.y;
-        }
-
-        // Se o mouse foi solto, resetar todos os blocos
-        if (mouseSolto) {
-            b->dragging = false;
-        }
-    }
-
-    if (nHover != -1) {
-        Block *b = &blocks[nHover]; // bloco selecionado
-        if (IsMouseButtonPressed(0) && mouse->holding == NULL) {
-            // Obtem posição do mouse relativa ao retângulo
-            Vector2 blockPosition = (Vector2){b->rec.x, b->rec.y};
-            mouse->offset = Vector2Subtract(mouse->position, blockPosition);
-            mouse->holding = b;
-            b->dragging = true;
-        }
-    }
-}
-
 int main(void)
 {
     // Janela
@@ -419,10 +376,8 @@ int main(void)
     Mouse mouse = newMouse();
 
     // Blocos e inicialização
-    int num_blocks = 0; // Número de blocos no momento
     char text_block[MAX_TEXT_BLOCK] = "Teste!"; // Texto usado nos blocos, alterado pela GUI
-    Block blocks[NUM_BLOCKS]; // TODO: Acho que vai precisar escrever uma lista ligada pra permitir a remoção de blocos... trabaio ein
-    bList *blocos = newBList(); // TODO: Nova lista ligada, remover aos poucos a antiga
+    bList *blocos = newBList(); 
 
     // Campos de Bloco e inicialização
     int num_bfields = 0; // Número de campos de bloco no momento
@@ -456,13 +411,12 @@ int main(void)
     {
         // Update
         //----------------------------------------------------------------------------------
-        float deltaTime = GetFrameTime();
+        // float deltaTime = GetFrameTime();
         mouse.position = GetMousePosition();
 
-        updateMouseCampos(&mouse, bfields, &num_bfields);
-        updateMouseGeradores(&mouse, blocks, &num_blocks, bspawners, &num_bspawners);
-        // updateMouseBlocosOld(&mouse, blocks, &num_blocks);
-        updateMouseBlocos(&mouse, blocos);
+        updateCampos(&mouse, bfields, &num_bfields);
+        updateGeradores(&mouse, blocos, bspawners, &num_bspawners);
+        updateBlocos(&mouse, blocos);
 
         // Update da Cãmera
         camera.zoom += ((float)GetMouseWheelMove()*0.05f);

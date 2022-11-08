@@ -78,7 +78,11 @@
                 " -lpthread",
                 " -ldl",
                 " -lrt",
-                "-lX11"
+                "-lX11",
+                "-Wall",
+                "-Wextra",
+                "-Wpedantic",
+                "-O2"
             ],
             "options": {
                 "cwd": "${fileDirname}"
