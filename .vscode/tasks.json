@@ -95,6 +95,41 @@
                 "isDefault": true
             },
             "detail": "Tarefa gerada pelo Depurador."
+        },
+        {
+            "type": "cppbuild",
+            "label": "C/C++: profiling gcc arquivo de build ativo",
+            "command": "/usr/bin/gcc",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${fileDirname}/**.c",
+                "-o",
+                "${fileDirname}/TutorialC",
+                "-lraylib",
+                " -lGL",
+                " -lm",
+                " -lpthread",
+                " -ldl",
+                " -lrt",
+                "-lX11",
+                "-Wall",
+                "-Wextra",
+                "-Wpedantic",
+                "-O2",
+                "-pg"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Tarefa gerada pelo Depurador."
         }
     ]
 }

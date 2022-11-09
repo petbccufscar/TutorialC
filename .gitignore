@@ -2,3 +2,7 @@
 main
 TutorialC
 *.out
+
+# Arquivos de profiling do gcc
+gmon.out
+profile.txt
