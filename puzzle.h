@@ -67,6 +67,28 @@ typedef struct BlockField {
     Rectangle rec;
 } BlockField;
 
+/**============================================
+ **INCOMPLETO   Elemento dos Puzzles
+ * Me baseando nisso https://stackoverflow.com/questions/7798383/array-of-pointers-to-multiple-types-c
+ * Pra criar uma array que vai guardar cada puzzle internamente, cada elemento do puzzle vai ser ou
+ * um pedaço de código ou texto (uma simples string, a formatação acho que vamos ver depois na hora
+ * de desenhar) ou um campo de bloco. Também vai precisar adicionar em cada campo de bloco o bloco
+ * apropriado para ele.
+ * Potencialmente adicionar aqui também os geradores de blocos (As respostas possíveis), mas não sei
+ * se vai realmente guardar aqui ou em uma estrutura separada (???)
+ *=============================================**/
+enum ElementType {text, field};
+struct Element
+{
+    ElementType type;
+    union {
+        char *str;
+        BlockField *bf;
+    }
+};
+
+
+
 
 /**============================================
  **       Funções de Criação e Deleção
