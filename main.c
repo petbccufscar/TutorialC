@@ -28,7 +28,7 @@ int main(void)
     Mouse mouse = newMouse();
 
     // Blocos e inicialização
-    char text_block[MAX_TEXT_BLOCK] = "Teste!"; // Texto usado nos blocos, alterado pela GUI
+    char text_block[MAX_TEXT_BLOCK] = "Teste"; // Texto usado nos blocos, alterado pela GUI
     bList *blocos = newBList(); 
 
     // Campos de Bloco e inicialização
@@ -38,7 +38,7 @@ int main(void)
     // Spawners de Bloco e inicialização
     // TODO: Aqui vai ser necessário pegar todos os geradores que precisa colocar
     //       calcular a posição de cada um e ai sim colocar no vetor, apenas para
-    //       testes aqui    
+    //       testes aqui (JSON)
     int num_bspawners = 0;
     BlockSpawner bspawners[NUM_BLOCK_SPAWNER];
     Block bTeste = newBlock("Hahaha", (Vector2){20, 50});
@@ -61,8 +61,9 @@ int main(void)
     // Main game loop
     while (!WindowShouldClose())
     {
-        // Update
-        //----------------------------------------------------------------------------------
+    /**========================================================================
+     **                           UPDATE
+     *========================================================================**/
         // float deltaTime = GetFrameTime();
         mouse.position = GetMousePosition();
 
@@ -84,23 +85,23 @@ int main(void)
             EnableCursor();
         }
 
-        //----------------------------------------------------------------------------------
-
-        // Draw
-        //----------------------------------------------------------------------------------
+    /**========================================================================
+     **                           DRAW
+     *========================================================================**/
         BeginDrawing();
 
             ClearBackground(LIGHTGRAY);
             
             // Desenha geradores de blocos
             for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], &mouse.holding->block, &mouse.hovering->block); }
+
             // Desenha os blocos
-            // for (int i = 0; i < num_blocks; i++) { DrawBlock(&blocks[i], mouse.holding, mouse.hovering); }
             bNode *node = blocos->head;
             while (node != NULL) {
                 DrawBlock(&node->block, &mouse.holding->block, &mouse.hovering->block); 
                 node = node->next;
             }
+
             // Desenha os campos
             for (int i = 0; i < num_bfields; i++) { DrawBlockField(&bfields[i]); }
 
@@ -110,32 +111,39 @@ int main(void)
             // 3. Profit
             EndMode2D();
 
-            // Draw Controles GUI e Debugging
-            // -------------------------------------
-            // Ver https://raylibtech.itch.io/rguiicons para ID dos ícones
-            float posX = screenWidth - 200; float posY = screenHeight - 50;
-            float dist_linhas = 25;
-            DrawFPS(10, 10);
-            // 0
-            drawMouseIndicator = GuiCheckBox((Rectangle){ posX, posY, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
-            // 1
-            posY -= dist_linhas;
-            if (GuiButton((Rectangle){posX, posY, 165, 20}, GuiIconText(112, "Criar Campo"))) { 
-                spawnBlockField(bfields, &num_bfields);
-            }
-            // 2
-            posY -= dist_linhas;
-            GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
-            if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
-                spawnBNode(blocos, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50})->permanent = true;
-                // spawnBlockOld(blocks, &num_blocks, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});
-            }
-            // 3
-            posY -= dist_linhas;
-            DrawText("Painel de testes", posX, posY, 10, DARKGRAY);
-            // ---------------------------------------
+        /**============================================
+         ** DRAW:   Controles GUI e Debugging
+         * Ver https://raylibtech.itch.io/rguiicons 
+         * para ID dos ícones
+         *=============================================**/
+                float posX = screenWidth - 200; float posY = screenHeight - 50;
+                float dist_linhas = 25;
+                DrawFPS(10, 10);
+                
+                // Linha 0 ===
+                drawMouseIndicator = GuiCheckBox((Rectangle){ posX, posY, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
 
-            // Indicador do mouse
+                // Linha 1 ===
+                posY -= dist_linhas;
+                if (GuiButton((Rectangle){posX, posY, 165, 20}, GuiIconText(112, "Criar Campo"))) { 
+                    spawnBlockField(bfields, &num_bfields);
+                }
+
+                // Linha 2 ===
+                posY -= dist_linhas;
+                GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
+                if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
+                    spawnBNode(blocos, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50})->permanent = true;
+                    // spawnBlockOld(blocks, &num_blocks, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});
+                }
+
+                // Linha 3 ===
+                posY -= dist_linhas;
+                DrawText("Painel de testes", posX, posY, 10, DARKGRAY);
+
+        /**============================================
+         ** DRAW:    Indicador do Mouse
+         *=============================================**/
             if (drawMouseIndicator){
                 float radius = 5.0f;
                 if (mouse.hovering != NULL) radius = 8.0f;
@@ -145,7 +153,6 @@ int main(void)
             }
 
         EndDrawing();
-        //----------------------------------------------------------------------------------
     }
 
     CloseWindow();

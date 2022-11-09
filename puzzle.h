@@ -7,7 +7,7 @@
 #include "raylib.h"
 #include "raymath.h"
 
-// Blocos Arrastáveis
+// Blocos
 #define NUM_BLOCKS 50 // Máximo de blocos que podem existir
 #define MAX_TEXT_BLOCK 255 // Tamanho máximo do texto de cada bloco (Nota: Se o texto está bugando com acentos, deve ser isso)
 #define FONT_SIZE 20 // Tamanho do texto
@@ -22,7 +22,7 @@
  **              Estruturas
  *=============================================**/
 
-// Bloco Arrastável
+// Bloco
 typedef struct Block {
     char text[MAX_TEXT_BLOCK + 1];
     Rectangle rec;

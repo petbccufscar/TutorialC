@@ -1,5 +1,11 @@
 #include "puzzle.h"
 
+/**==============================================
+ *                newBlock()
+ *  Inicializa um bloco com o texto e posição
+ *  dados, além de calcular o tamanho correto
+ *  dado o texto
+ *=============================================**/
 Block newBlock(char text[], Vector2 position) {
     float width = MeasureText(text, FONT_SIZE) + BLOCK_TEXT_PADDING * 2;
     float height = FONT_SIZE + BLOCK_TEXT_PADDING * 2;
@@ -23,6 +29,11 @@ Block newBlock(char text[], Vector2 position) {
     return b;
 }
 
+/**============================================
+ *               newBList()
+ * Aloca uma nova bList e a inicializa. 
+ * Retorna um ponteiro para ela.
+ *=============================================**/
 bList* newBList() {
     bList *new = malloc(sizeof (bList));
     new->end = NULL;
@@ -31,6 +42,12 @@ bList* newBList() {
     return new;
 }
 
+/**============================================
+ *               newBNode()
+ * Aloca um novo nó de bloco (bNode) e o inicializa
+ * conforme recebido. Também define o padrão de
+ * bloco com dono e não permanente.
+ *=============================================**/
 bNode* newBNode(bNode *prev, Block b, bNode *next) {
     bNode *new = malloc(sizeof (bNode));
     new->block = b;
@@ -41,6 +58,11 @@ bNode* newBNode(bNode *prev, Block b, bNode *next) {
     return new;
 }
 
+/**============================================
+ *               newMouse()
+ * Cria uma instância da estrutura do Mouse e 
+ * inicializa ela com valores padrões.
+ *=============================================**/
 Mouse newMouse() {
     Mouse m = {
         .position = {-100.0f, -100.0f},
@@ -52,7 +74,15 @@ Mouse newMouse() {
     return m;
 }
 
-// Remove nó com base no seu ponteiro
+/**============================================
+ *               removeBNode()
+ * Dado o ponteiro de um nó e sua lista correspondente
+ * remove esse nó da lista corretamente, ajustando
+ * os outros nós conforme necessário.
+ * 
+ * Também verifica o mouse para evitar que ele tenha
+ * referências inválidas
+ *=============================================**/
 bool removeBNode(Mouse *mouse, bList *list, bNode *node) {
     // Removendo referências que o mouse pode ter do node
     if (mouse->holding == node) { mouse->holding = NULL; }
@@ -86,7 +116,12 @@ bool removeBNode(Mouse *mouse, bList *list, bNode *node) {
     return true;
 }
 
-// Adiciona um nó na lista (Final da lista)
+/**============================================
+ *               addBNode()
+ * Adiciona um novo nó ao final da lista dada.
+ * Recebe um bloco, que é transformado em um nó
+ * padrão (newBNode()) e inserido na lista.
+ *=============================================**/
 bNode* addBNode(bList *list, Block b) {
     // Lista vazia
     bNode *new = newBNode(NULL, b, NULL);
@@ -103,6 +138,11 @@ bNode* addBNode(bList *list, Block b) {
     return new;
 }
 
+/**============================================
+ *               newBlockSpawner()
+ * Cria uma nova instância de um gerador de blocos
+ * utilizando valores padrão e um bloco como base
+ *=============================================**/
 BlockSpawner newBlockSpawner(Block base) {
     BlockSpawner bs = {
         .base = (bNode){
@@ -117,6 +157,12 @@ BlockSpawner newBlockSpawner(Block base) {
     return bs;
 }
 
+/**============================================
+ *               newBlockField()
+ * Cria uma nova instância de um campo de blocos
+ * utilizando valores padrões definidos no cabeçalho
+ * TODO: Retirar a lógica do posicionamento aleatório daqui e colocar no main.c na parte de debugging
+ *=============================================**/
 BlockField newBlockField() {
     // Dimensões iniciais
     float width, height;
@@ -136,11 +182,27 @@ BlockField newBlockField() {
     return bf;
 }
 
+/**============================================
+ *               spawnBNode()
+ * Dada uma lista de nós de bloco, o texto e posição,
+ * cria um bloco e o adiciona na lista.
+ *=============================================**/
 bNode* spawnBNode(bList *list, char text[], Vector2 position) {
     Block b = newBlock(text, position);
     return addBNode(list, b);
 }
 
+/**============================================
+ *               spawnBlockSpawner()
+ * Dado um array de geradores de bloco, o número
+ * atual de geradores e um bloco como base, cria
+ * e adiciona um novo gerador a array caso ainda
+ * exista espaço.
+ * TODO: Alterar para lista ligada assim como foi feito com os Blocos (bList)
+ *       ou não também... Diferente dos blocos acho que os geradores serão 
+ *       criados e deletados todos juntos de acordo com o arquivo lido, é capaz
+ *       que não seja necessário, só criar uma função de limpar a array toda.
+ *=============================================**/
 bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base) {
     if (*num_bspawners >= NUM_BLOCK_SPAWNER) {
         printf("Não foi possível gerar um novo gerador de blocos, máximo (%d) atingido\n", NUM_BLOCK_SPAWNER);
@@ -152,6 +214,14 @@ bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base) {
     }
 }
 
+/**============================================
+ *               spawnBlockField()
+ * Dado um array de campos de bloco e o número atual
+ * de campos, cria e adiciona um campo de bloco ao 
+ * array caso ainda exista espaço
+ * TODO: Alterar para lista ligada assim como foi feito com os Blocos (bList)
+ *       ou não também... Ver TODO do spawnBlockSpawner()
+ *=============================================**/
 bool spawnBlockField(BlockField *arr, int *num_bfields) {
     if(*num_bfields >= NUM_BLOCK_FIELDS) {
         printf("Não foi possível gerar um novo campo, máximo (%d) atingido\n", NUM_BLOCK_FIELDS);
@@ -163,8 +233,12 @@ bool spawnBlockField(BlockField *arr, int *num_bfields) {
     }
 }
 
-
-// TODO: Alterar pra receber bNodes ao invés de Blocks
+/**============================================
+ *               DrawBlock()
+ * Recebe um bloco e estados relevantes do mouse.
+ * De acordo com isso, desenha o bloco na tela.
+ * TODO: Alterar pra receber bNodes ao invés de Blocks
+ *=============================================**/
 void DrawBlock(Block *b, Block *holding, Block *hovering) {
     Color textColor = MAROON;
     int segments = 50; float roundness = 0.4f; float lineThick = 2.0f;
@@ -180,18 +254,36 @@ void DrawBlock(Block *b, Block *holding, Block *hovering) {
     DrawText(b->text, (int)b->rec.x + BLOCK_TEXT_PADDING, (int)b->rec.y + BLOCK_TEXT_PADDING, FONT_SIZE, textColor); // Texto
 }
 
-// TODO: Alterar pra receber bNodes ao invés de Blocks
+/**============================================
+ *               DrawBlockSpawner()
+ * Recebe um gerador de blocos e estados relevantes
+ * do mouse. De acordo com isso desenha o gerador 
+ * na tela.
+ * TODO: Alterar pra receber bNodes ao invés de Blocks
+ *=============================================**/
 void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering) {
     DrawBlock(&bf->base.block, holding, hovering);
 }
 
+/**============================================
+ *               DrawBlockField()
+ * Recebe um campo de bloco. 
+ * De acordo com ele desenha o campo na tela.
+ *=============================================**/
 void DrawBlockField(BlockField *bf) {
     int segments = 50; float roundness = 0.4f; float lineThick = 1.0f;
     DrawRectangleRoundedLines(bf->rec, roundness, segments, lineThick, MAROON);
 }
 
 
-// Update da colisão entre Mouse / Campos de Bloco
+/**============================================
+ *               updateCampos()
+ * Calcula e altera o estado de cada campo do array
+ * passado. Leva em consideração e altera o estado 
+ * do mouse.
+ * Ao final da função, nós pertencentes a um campo
+ * tem seu campo owned = true
+ *=============================================**/
 void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
     // Quando um mouse está segurando um bloco e para em cima de um campo, esse
     // campo deve acomodar o bloco. 
@@ -230,7 +322,15 @@ void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
     }
 }
 
-// Update dos Geradores de Bloco
+/**============================================
+ *               updateGeradores()
+ * Calcula e altera o estado de cada gerador do array 
+ * passado, levando em consideração o estado do mouse.
+ * Recebe também a lista de blocos para poder gerar 
+ * os blocos.
+ * Ao final da função, blocos gerados por um gerador
+ * que estejam agarrados pelo mouse tem seu campo owned = true.
+ *=============================================**/
 void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *num_bspawners) {
     for (int i = 0; i < *num_bspawners; i++) {
         BlockSpawner *bs = &bspawners[i];
@@ -264,7 +364,15 @@ void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *n
     }
 }
 
-// Update da colisão entre Mouse / Blocos
+/**============================================
+ *               updateBNodes()
+ * Calcula e atualiza cada nó de bloco de uma dada
+ * lista de nós levando em conta o estado do mouse.
+ * 
+ * Responsável principalmente por alterações no 
+ * estado do mouse, e da verificação de owner de 
+ * cada bloco.
+ *=============================================**/
 void updateBNodes(Mouse *mouse, bList *list) {
     bNode *lastHover = NULL;
 
@@ -316,7 +424,7 @@ void updateBNodes(Mouse *mouse, bList *list) {
     if (lastHover != NULL) {
         Block *b = &lastHover->block;
         if (IsMouseButtonPressed(0) && mouse->holding == NULL) {
-            // Obterm posição do mouse relativa ao retângulo
+            // Obtem posição do mouse relativa ao retângulo
             Vector2 blockPosition = (Vector2){b->rec.x, b->rec.y};
             mouse->offset = Vector2Subtract(mouse->position, blockPosition);
             mouse->holding = lastHover;
