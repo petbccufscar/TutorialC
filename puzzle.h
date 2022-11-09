@@ -18,9 +18,10 @@
 // Geradores de Blocos
 #define NUM_BLOCK_SPAWNER 50 // Máximo de geradores de blocos
 
+/**============================================
+ **              Estruturas
+ *=============================================**/
 
-// ---------------------------------------------------------------------------------------------------
-// Estruturas
 // Bloco Arrastável
 typedef struct Block {
     char text[MAX_TEXT_BLOCK + 1];
@@ -29,10 +30,8 @@ typedef struct Block {
     bool dragging;
 } Block;
 
-// Precisamos de uma estrutura que permita remoção de blocos fora de ordem
-// Como não teremos blocos sobrevivendo "sozinhos" (Sempre estarão ou acoplados
-// a um gerador ou campo) acho que não vai causar muitos problemas... espero
-typedef struct bNode { // Block Node
+// Lista de Blocos (Nós)
+typedef struct bNode {
     Block block;
     struct bNode *next;
     struct bNode *prev;
@@ -40,12 +39,14 @@ typedef struct bNode { // Block Node
     bool permanent;
 } bNode;
 
+// Lista de bNodes
 typedef struct bList {
     bNode *head;
     bNode *end;
     size_t size;
 } bList;
 
+// Mouse
 typedef struct Mouse {
     Vector2 position;
     Vector2 offset;
@@ -67,43 +68,53 @@ typedef struct BlockField {
 } BlockField;
 
 
-// ---------------------------------------------------------------------------------------------------
-// Funções de criação e deleção
+/**============================================
+ **       Funções de Criação e Deleção
+ * Funções primitivas de criação de objetos
+ *=============================================**/
+
 Block newBlock(char text[], Vector2 position);
 bList* newBList();
 bNode* newBNode(bNode *prev, Block b, bNode *next);
 Mouse newMouse();
-// Remove nó com base no seu ponteiro
 bool removeBNode(Mouse *mouse, bList *list, bNode *node);
-// Adiciona um nó na lista (Final da lista)
 bNode* addBNode(bList *list, Block b);
 BlockSpawner newBlockSpawner(Block base);
 BlockField newBlockField();
 
 
-// ---------------------------------------------------------------------------------------------------
-// Funções de Spawn
+/**============================================
+ **             Funções de Spawn
+ * Criam um objeto e o colocam numa estrutura de
+ * armazenamento, utilizada pelos updates
+ *=============================================**/
+
 bNode* spawnBNode(bList *list, char text[], Vector2 position);
 bool spawnBlockField(BlockField *arr, int *num_bfields);
 bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base);
 
 
-// ---------------------------------------------------------------------------------------------------
-// Funções de desenho
-// TODO: Alterar pra receber bNodes ao invés de Blocks
+/**============================================
+ **            Funções de Desenho
+ * Desenham o objeto passado usando as funções do
+ * raylib
+ *=============================================**/
+
 void DrawBlock(Block *b, Block *holding, Block *hovering);
-// TODO: Alterar pra receber bNodes ao invés de Blocks
 void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering);
 void DrawBlockField(BlockField *bf);
 
 
-// ---------------------------------------------------------------------------------------------------
-// Funções de Atualização
-// Update da colisão entre Mouse / Campos de Bloco
-void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields);
-// Update dos Geradores de Bloco
+/**============================================
+ **            Funções de Atualização
+ * Percorrem as estruturas de armazenamento relevantes
+ * atualizando a posição e estado de cada objeto
+ * com base na interação do usuário
+ *=============================================**/
+
 void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *num_bspawners);
-// Update da colisão entre Mouse / Blocos
+void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields);
 void updateBNodes(Mouse *mouse, bList *list);
+
 
 #endif

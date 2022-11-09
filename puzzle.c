@@ -1,7 +1,5 @@
 #include "puzzle.h"
 
-// ---------------------------------------------------------------------------------------------------
-// Funções de criação e deleção
 Block newBlock(char text[], Vector2 position) {
     float width = MeasureText(text, FONT_SIZE) + BLOCK_TEXT_PADDING * 2;
     float height = FONT_SIZE + BLOCK_TEXT_PADDING * 2;
@@ -138,8 +136,6 @@ BlockField newBlockField() {
     return bf;
 }
 
-// ---------------------------------------------------------------------------------------------------
-// Funções de Spawn
 bNode* spawnBNode(bList *list, char text[], Vector2 position) {
     Block b = newBlock(text, position);
     return addBNode(list, b);
@@ -168,8 +164,6 @@ bool spawnBlockField(BlockField *arr, int *num_bfields) {
 }
 
 
-// ---------------------------------------------------------------------------------------------------
-// Funções de desenho
 // TODO: Alterar pra receber bNodes ao invés de Blocks
 void DrawBlock(Block *b, Block *holding, Block *hovering) {
     Color textColor = MAROON;
@@ -197,8 +191,6 @@ void DrawBlockField(BlockField *bf) {
 }
 
 
-// ---------------------------------------------------------------------------------------------------
-// Funções de Atualização
 // Update da colisão entre Mouse / Campos de Bloco
 void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
     // Quando um mouse está segurando um bloco e para em cima de um campo, esse
@@ -313,6 +305,7 @@ void updateBNodes(Mouse *mouse, bList *list) {
             removeBNode(mouse, list, n);
         } else if (!n->permanent) {
             // Exige que se confirme um dono pra próxima vez
+            // Os updates anteriores devem tornar owned=true a cada iteração
             n->owned = false;
         }
 

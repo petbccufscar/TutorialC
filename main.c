@@ -66,6 +66,7 @@ int main(void)
         // float deltaTime = GetFrameTime();
         mouse.position = GetMousePosition();
 
+        //! A ordem do update importa
         updateGeradores(&mouse, blocos, bspawners, &num_bspawners);
         updateCampos(&mouse, bfields, &num_bfields);
         updateBNodes(&mouse, blocos);
@@ -110,7 +111,7 @@ int main(void)
             EndMode2D();
 
             // Draw Controles GUI e Debugging
-            // ------------------------------------------------------------------------------
+            // -------------------------------------
             // Ver https://raylibtech.itch.io/rguiicons para ID dos ícones
             float posX = screenWidth - 200; float posY = screenHeight - 50;
             float dist_linhas = 25;
@@ -132,7 +133,7 @@ int main(void)
             // 3
             posY -= dist_linhas;
             DrawText("Painel de testes", posX, posY, 10, DARKGRAY);
-            // ------------------------------------------------------------------------------
+            // ---------------------------------------
 
             // Indicador do mouse
             if (drawMouseIndicator){
