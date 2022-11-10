@@ -35,16 +35,20 @@ int main(void)
     int num_bfields = 0; // Número de campos de bloco no momento
     BlockField bfields[NUM_BLOCK_FIELDS];
 
+    /**============================================
+     **               Puzzles
+     *=============================================**/
+    // TODO: Inicializações de teste abaixo, vamos usar um arquivo depois
     // Spawners de Bloco e inicialização
-    // TODO: Aqui vai ser necessário pegar todos os geradores que precisa colocar
-    //       calcular a posição de cada um e ai sim colocar no vetor, apenas para
-    //       testes aqui (JSON)
     int num_bspawners = 0;
     BlockSpawner bspawners[NUM_BLOCK_SPAWNER];
     Block bTeste = newBlock("Hahaha", (Vector2){20, 50});
     spawnBlockSpawner(bspawners, &num_bspawners, bTeste);
     Block bTeste2 = newBlock("Só precisei mudar o código todo", (Vector2){20, 100});
     spawnBlockSpawner(bspawners, &num_bspawners, bTeste2);
+
+    // CodePuzzles e inicialização
+    
 
     // Camera
     Camera2D camera = { 0 };

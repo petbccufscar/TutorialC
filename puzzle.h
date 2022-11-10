@@ -17,6 +17,9 @@
 #define BLOCK_FIELD_PADDING 4 // Padding entre o campo do bloco e o bloco
 // Geradores de Blocos
 #define NUM_BLOCK_SPAWNER 50 // Máximo de geradores de blocos
+// Puzzles
+#define MAX_PUZZLE_ELEMENTS 64
+#define MAX_PUZZLE_SPAWNERS 16
 
 /**============================================
  **              Estruturas
@@ -74,20 +77,21 @@ typedef struct BlockField {
  * um pedaço de código ou texto (uma simples string, a formatação acho que vamos ver depois na hora
  * de desenhar) ou um campo de bloco. Também vai precisar adicionar em cada campo de bloco o bloco
  * apropriado para ele.
- * Potencialmente adicionar aqui também os geradores de blocos (As respostas possíveis), mas não sei
- * se vai realmente guardar aqui ou em uma estrutura separada (???)
  *=============================================**/
-enum ElementType {text, field};
-struct Element
-{
+
+typedef enum ElementType {text, field} ElementType;
+typedef struct Element {
     ElementType type;
     union {
         char *str;
         BlockField *bf;
-    }
-};
+    };
+} Element;
 
-
+typedef struct CodePuzzle {
+    Element elements[MAX_PUZZLE_ELEMENTS];
+    BlockSpawner bspawners[MAX_PUZZLE_SPAWNERS];
+} CodePuzzle;
 
 
 /**============================================
@@ -103,6 +107,7 @@ bool removeBNode(Mouse *mouse, bList *list, bNode *node);
 bNode* addBNode(bList *list, Block b);
 BlockSpawner newBlockSpawner(Block base);
 BlockField newBlockField();
+CodePuzzle newCodePuzzle();
 
 
 /**============================================
