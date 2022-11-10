@@ -28,7 +28,7 @@ int main(void)
     Mouse mouse = newMouse();
 
     // Blocos e inicialização
-    char text_block[MAX_TEXT_BLOCK] = "Teste"; // Texto usado nos blocos, alterado pela GUI
+    char text_block[MAX_TEXT_SIZE] = "Teste"; // Texto usado nos blocos, alterado pela GUI
     bList *blocos = newBList(); 
 
     // Campos de Bloco e inicialização
@@ -43,12 +43,18 @@ int main(void)
     int num_bspawners = 0;
     BlockSpawner bspawners[NUM_BLOCK_SPAWNER];
     Block bTeste = newBlock("Hahaha", (Vector2){20, 50});
-    spawnBlockSpawner(bspawners, &num_bspawners, bTeste);
+    spawnBlockSpawnerOld(bspawners, &num_bspawners, bTeste);
     Block bTeste2 = newBlock("Só precisei mudar o código todo", (Vector2){20, 100});
-    spawnBlockSpawner(bspawners, &num_bspawners, bTeste2);
+    spawnBlockSpawnerOld(bspawners, &num_bspawners, bTeste2);
 
-    // CodePuzzles e inicialização
-    
+    // Inicialização manual de um CodePuzzle
+    CodePuzzle cp = newCodePuzzle();
+    spawnElementStr(&cp, "Teste!");
+    spawnElementBf(&cp);
+    spawnElementStr(&cp, "Ok");
+
+    spawnBlockSpawner(&cp, "Sim");
+    spawnBlockSpawner(&cp, "Não");
 
     // Camera
     Camera2D camera = { 0 };
@@ -135,7 +141,7 @@ int main(void)
 
                 // Linha 2 ===
                 posY -= dist_linhas;
-                GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_BLOCK, true);
+                GuiTextBox((Rectangle){posX, posY, 100, 20}, text_block, MAX_TEXT_SIZE, true);
                 if (GuiButton((Rectangle){posX + 105, posY, 60, 20}, GuiIconText(112, "Criar"))) { 
                     spawnBNode(blocos, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50})->permanent = true;
                     // spawnBlockOld(blocks, &num_blocks, text_block, (Vector2){GetScreenWidth()/2 + rand()%50, GetScreenHeight()/2 + rand()%50});

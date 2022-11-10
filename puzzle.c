@@ -183,6 +183,53 @@ BlockField newBlockField() {
 }
 
 /**============================================
+ *               newCodePuzzle()
+ * Cria um novo CodePuzzle vazio
+ * Nota: Não sei o por que desse aviso, tudo parece 
+ *       funcionar bem... 
+ *=============================================**/
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-braces"
+CodePuzzle newCodePuzzle() {
+    CodePuzzle cp = {
+        .elements = {0},
+        .num_elements = 0,
+        .bspawners = {0},
+        .num_bspawners = 0
+    };
+    return cp;
+}
+#pragma GCC diagnostic pop
+
+/**============================================
+ *               newStrElement()
+ * Cria um novo elemento do tipo texto usando 
+ * uma string
+ *=============================================**/
+Element newStrElement(char str[]) {
+    Element e = {
+        .type = text,
+        .str = ""
+    };
+    strcpy(e.str, str);
+    return e;
+}
+
+/**============================================
+ *               newBfElement()
+ * Cria um novo elemento do tipo field usando 
+ * um ponteiro de BlockField
+ *=============================================**/
+Element newBfElement() {
+    BlockField bf = newBlockField();
+    Element e = {
+        .type = field,
+        .bf = &bf
+    };
+    return e;
+}
+
+/**============================================
  *               spawnBNode()
  * Dada uma lista de nós de bloco, o texto e posição,
  * cria um bloco e o adiciona na lista.
@@ -193,7 +240,7 @@ bNode* spawnBNode(bList *list, char text[], Vector2 position) {
 }
 
 /**============================================
- *               spawnBlockSpawner()
+ *               spawnBlockSpawnerOld()
  * Dado um array de geradores de bloco, o número
  * atual de geradores e um bloco como base, cria
  * e adiciona um novo gerador a array caso ainda
@@ -203,7 +250,7 @@ bNode* spawnBNode(bList *list, char text[], Vector2 position) {
  *       criados e deletados todos juntos de acordo com o arquivo lido, é capaz
  *       que não seja necessário, só criar uma função de limpar a array toda.
  *=============================================**/
-bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base) {
+bool spawnBlockSpawnerOld(BlockSpawner *arr, int *num_bspawners, Block base) {
     if (*num_bspawners >= NUM_BLOCK_SPAWNER) {
         printf("Não foi possível gerar um novo gerador de blocos, máximo (%d) atingido\n", NUM_BLOCK_SPAWNER);
         return false; // Não é possível gerar mais blocos
@@ -220,7 +267,7 @@ bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base) {
  * de campos, cria e adiciona um campo de bloco ao 
  * array caso ainda exista espaço
  * TODO: Alterar para lista ligada assim como foi feito com os Blocos (bList)
- *       ou não também... Ver TODO do spawnBlockSpawner()
+ *       ou não também... Ver TODO do spawnBlockSpawnerOld()
  *=============================================**/
 bool spawnBlockField(BlockField *arr, int *num_bfields) {
     if(*num_bfields >= NUM_BLOCK_FIELDS) {
@@ -229,6 +276,56 @@ bool spawnBlockField(BlockField *arr, int *num_bfields) {
     } else {
         arr[*num_bfields] = newBlockField();
         *num_bfields += 1;
+        return true;
+    }
+}
+
+/**============================================
+ *               spawnElementStr()
+ * Adiciona um elemento de texto ao final de um 
+ * CodePuzzle, a ordem importa!
+ *=============================================**/
+bool spawnElementStr(CodePuzzle *cp, char text[]) {
+    if (cp->num_elements >= MAX_PUZZLE_ELEMENTS) {
+        printf("Não foi possível gerar um novo elemento, máximo (%d) atingido\n", MAX_PUZZLE_ELEMENTS);
+        return false; 
+    } else {
+        cp->elements[cp->num_elements] = newStrElement(text);
+        cp->num_elements += 1;
+        return true;
+    }
+}
+
+/**============================================
+ *               spawnElementBf()
+ * Adiciona um elemento de campo ao final de um 
+ * CodePuzzle, a ordem importa!
+ *=============================================**/
+bool spawnElementBf(CodePuzzle *cp) {
+    if (cp->num_elements >= MAX_PUZZLE_ELEMENTS) {
+        printf("Não foi possível gerar um novo elemento, máximo (%d) atingido\n", MAX_PUZZLE_ELEMENTS);
+        return false; 
+    } else {
+        cp->elements[cp->num_elements] = newBfElement();
+        cp->num_elements += 1;
+        return true;
+    }
+}
+
+/**============================================
+ *               spawnBlockSpawner()
+ * Adiciona um gerador a um CodePuzzle, a ordem
+ * importa!
+ *=============================================**/
+bool spawnBlockSpawner(CodePuzzle *cp, char text[]) {
+    if (cp->num_bspawners >= MAX_PUZZLE_SPAWNERS) {
+        printf("Não foi possível gerar um novo gerador de blocos, máximo (%d) atingido\n", MAX_PUZZLE_SPAWNERS);
+        return false;
+    } else {
+        // TODO: Ver depois se o ideal é decidir a posição de cada spawner aqui, ou depois
+        Block base = newBlock(text, (Vector2){0.0f, 0.0f});
+        cp->bspawners[cp->num_bspawners] = newBlockSpawner(base);
+        cp->num_bspawners += 1;
         return true;
     }
 }

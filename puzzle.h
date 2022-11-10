@@ -8,18 +8,21 @@
 #include "raymath.h"
 
 // Blocos
-#define NUM_BLOCKS 50 // Máximo de blocos que podem existir
-#define MAX_TEXT_BLOCK 255 // Tamanho máximo do texto de cada bloco (Nota: Se o texto está bugando com acentos, deve ser isso)
-#define FONT_SIZE 20 // Tamanho do texto
-#define BLOCK_TEXT_PADDING 8 // Padding entre o bloco e o texto no meio
+#define NUM_BLOCKS 50            // Máximo de blocos que podem existir
+#define MAX_TEXT_SIZE 255       // Tamanho máximo do texto de cada bloco (Nota: Se o texto está bugando com acentos, deve ser isso)
+#define FONT_SIZE 20             // Tamanho do texto
+#define BLOCK_TEXT_PADDING 8     // Padding entre o bloco e o texto no meio
 // Campo de Bloco
-#define NUM_BLOCK_FIELDS 50 // Máximo de campos de bloco
-#define BLOCK_FIELD_PADDING 4 // Padding entre o campo do bloco e o bloco
+#define NUM_BLOCK_FIELDS 50      // Máximo de campos de bloco
+#define BLOCK_FIELD_PADDING 4    // Padding entre o campo do bloco e o bloco
 // Geradores de Blocos
-#define NUM_BLOCK_SPAWNER 50 // Máximo de geradores de blocos
+#define NUM_BLOCK_SPAWNER 50     // Máximo de geradores de blocos
 // Puzzles
-#define MAX_PUZZLE_ELEMENTS 64
-#define MAX_PUZZLE_SPAWNERS 16
+#define MAX_PUZZLE_ELEMENTS 64   // Máximo de elementos para cada puzzle
+#define MAX_PUZZLE_SPAWNERS 16   // Máximo de geradores para cada puzzle
+#define PUZZLE_PADDING 16        // Espaçamento entre o puzzle e a parte superior e esquerda 
+#define V_ELEMENT_SPACING 8      // Espaçamento vertical entre elementos   
+#define H_ELEMENT_SPACING 12     // Espaçamento horizontal entre elementos
 
 /**============================================
  **              Estruturas
@@ -27,7 +30,7 @@
 
 // Bloco
 typedef struct Block {
-    char text[MAX_TEXT_BLOCK + 1];
+    char text[MAX_TEXT_SIZE + 1];
     Rectangle rec;
     bool hover;
     bool dragging;
@@ -83,14 +86,16 @@ typedef enum ElementType {text, field} ElementType;
 typedef struct Element {
     ElementType type;
     union {
-        char *str;
+        char str[MAX_TEXT_SIZE];
         BlockField *bf;
     };
 } Element;
 
 typedef struct CodePuzzle {
     Element elements[MAX_PUZZLE_ELEMENTS];
+    int num_elements;
     BlockSpawner bspawners[MAX_PUZZLE_SPAWNERS];
+    int num_bspawners;
 } CodePuzzle;
 
 
@@ -107,6 +112,8 @@ bool removeBNode(Mouse *mouse, bList *list, bNode *node);
 bNode* addBNode(bList *list, Block b);
 BlockSpawner newBlockSpawner(Block base);
 BlockField newBlockField();
+Element newStrElement(char str[]);
+Element newBfElement();
 CodePuzzle newCodePuzzle();
 
 
@@ -118,8 +125,10 @@ CodePuzzle newCodePuzzle();
 
 bNode* spawnBNode(bList *list, char text[], Vector2 position);
 bool spawnBlockField(BlockField *arr, int *num_bfields);
-bool spawnBlockSpawner(BlockSpawner *arr, int *num_bspawners, Block base);
-
+bool spawnBlockSpawnerOld(BlockSpawner *arr, int *num_bspawners, Block base);
+bool spawnElementStr(CodePuzzle *cp, char text[]);
+bool spawnElementBf(CodePuzzle *cp);
+bool spawnBlockSpawner(CodePuzzle *cp, char text[]);
 
 /**============================================
  **            Funções de Desenho
