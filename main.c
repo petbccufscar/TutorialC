@@ -49,9 +49,9 @@ int main(void)
 
     // Inicialização manual de um CodePuzzle
     CodePuzzle cp = newCodePuzzle();
-    spawnElementStr(&cp, "Teste!");
+    spawnElementTxt(&cp, "Teste!");
     spawnElementBf(&cp);
-    spawnElementStr(&cp, "Ok");
+    spawnElementTxt(&cp, "Ok");
 
     spawnBlockSpawner(&cp, "Sim");
     spawnBlockSpawner(&cp, "Não");
@@ -114,6 +114,9 @@ int main(void)
 
             // Desenha os campos
             for (int i = 0; i < num_bfields; i++) { DrawBlockField(&bfields[i]); }
+
+            // Desenha o CodePuzzle
+            DrawCodePuzzle(&cp);
 
             BeginMode2D(camera);
             // 1. Begin 2D
