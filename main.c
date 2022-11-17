@@ -16,13 +16,21 @@
 #include "raygui.h"
 #pragma GCC diagnostic pop
 
+#define MAX_FONTS 2
+
 int main(void)
 {
     // Janela
-    const int screenWidth = 1000;
-    const int screenHeight = 650;
+    const int screenWidth = 1500;
+    const int screenHeight = 800;
 
     InitWindow(screenWidth, screenHeight, "Tutorial C");
+
+    // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
+    Font fonts[MAX_FONTS] = { 0 }; 
+
+    // fonts[0] = LoadFontEx("resources/fonts/unifont.ttf", 30, 0, 500);
+    fonts[0] = LoadFont("resources/fonts/Ticketing.fnt");
 
     // Indicador do mouse
     Mouse mouse = newMouse();
@@ -164,6 +172,9 @@ int main(void)
                 DrawCircleV(mouse.position, radius, LIGHTGRAY);
                 DrawCircleV(mouse.position, radius-2, mouse.color);
             }
+
+        // TODO: Teste de fonte, remover depois
+        DrawTextEx(fonts[0], "typedef enum ElementType {text, field} ElementType;", (Vector2){300.0f, 300.0f}, (float)fonts[0].baseSize, 2, MAROON);
 
         EndDrawing();
     }
