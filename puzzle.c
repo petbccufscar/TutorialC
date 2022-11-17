@@ -207,11 +207,17 @@ CodePuzzle newCodePuzzle() {
  * uma string
  *=============================================**/
 Element newStrElement(char str[]) {
+    // TODO: Receber Vector2 da posição depois que as funções de 
+    //       spawn ficarem decidindo isso...
+    // TODO: Criar função de desalocar memória de um CodePuzzle
+    TextElem *txt = malloc(sizeof(TextElem));
+    strcpy(txt->str, str);
+    txt->position = (Vector2){0.0f, 0.0f};
+
     Element e = {
         .type = text,
-        .str = ""
+        .txt = txt
     };
-    strcpy(e.str, str);
     return e;
 }
 
@@ -222,10 +228,12 @@ Element newStrElement(char str[]) {
  *=============================================**/
 Element newBfElement() {
     BlockField bf = newBlockField();
+
     Element e = {
         .type = field,
-        .bf = &bf
+        .bf = malloc(sizeof (BlockField))
     };
+    *e.bf = bf; // Copia pro endereço de bf
     return e;
 }
 
@@ -281,11 +289,11 @@ bool spawnBlockField(BlockField *arr, int *num_bfields) {
 }
 
 /**============================================
- *               spawnElementStr()
+ *               spawnElementTxt()
  * Adiciona um elemento de texto ao final de um 
  * CodePuzzle, a ordem importa!
  *=============================================**/
-bool spawnElementStr(CodePuzzle *cp, char text[]) {
+bool spawnElementTxt(CodePuzzle *cp, char text[]) {
     if (cp->num_elements >= MAX_PUZZLE_ELEMENTS) {
         printf("Não foi possível gerar um novo elemento, máximo (%d) atingido\n", MAX_PUZZLE_ELEMENTS);
         return false; 
@@ -322,7 +330,7 @@ bool spawnBlockSpawner(CodePuzzle *cp, char text[]) {
         printf("Não foi possível gerar um novo gerador de blocos, máximo (%d) atingido\n", MAX_PUZZLE_SPAWNERS);
         return false;
     } else {
-        // TODO: Ver depois se o ideal é decidir a posição de cada spawner aqui, ou depois
+        // TODO: Após cada inserção os geradores devem ter a posição correta
         Block base = newBlock(text, (Vector2){0.0f, 0.0f});
         cp->bspawners[cp->num_bspawners] = newBlockSpawner(base);
         cp->num_bspawners += 1;
@@ -370,6 +378,20 @@ void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering) {
 void DrawBlockField(BlockField *bf) {
     int segments = 50; float roundness = 0.4f; float lineThick = 1.0f;
     DrawRectangleRoundedLines(bf->rec, roundness, segments, lineThick, MAROON);
+}
+
+/**============================================
+ *               DrawCodePuzzle()
+ * Recebe um CodePuzzle, e desenha ele corretamente
+ * na tela
+ *=============================================**/
+void DrawCodePuzzle(CodePuzzle *cp) {
+    // TODO:
+    // Desenhar background da esquerda
+    // Desenhar blockfields
+
+    // Desenhar sequencialmente os elementos
+    // chamando o Draw apropriado
 }
 
 

@@ -82,11 +82,16 @@ typedef struct BlockField {
  * apropriado para ele.
  *=============================================**/
 
+typedef struct TextElem {
+    char str[MAX_TEXT_SIZE];
+    Vector2 position;
+} TextElem;
+
 typedef enum ElementType {text, field} ElementType;
 typedef struct Element {
     ElementType type;
     union {
-        char str[MAX_TEXT_SIZE];
+        TextElem *txt;
         BlockField *bf;
     };
 } Element;
@@ -126,7 +131,7 @@ CodePuzzle newCodePuzzle();
 bNode* spawnBNode(bList *list, char text[], Vector2 position);
 bool spawnBlockField(BlockField *arr, int *num_bfields);
 bool spawnBlockSpawnerOld(BlockSpawner *arr, int *num_bspawners, Block base);
-bool spawnElementStr(CodePuzzle *cp, char text[]);
+bool spawnElementTxt(CodePuzzle *cp, char text[]);
 bool spawnElementBf(CodePuzzle *cp);
 bool spawnBlockSpawner(CodePuzzle *cp, char text[]);
 
@@ -139,6 +144,7 @@ bool spawnBlockSpawner(CodePuzzle *cp, char text[]);
 void DrawBlock(Block *b, Block *holding, Block *hovering);
 void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering);
 void DrawBlockField(BlockField *bf);
+void DrawCodePuzzle(CodePuzzle *cp);
 
 
 /**============================================
