@@ -50,19 +50,23 @@ int main(void)
     // Spawners de Bloco e inicialização
     int num_bspawners = 0;
     BlockSpawner bspawners[NUM_BLOCK_SPAWNER];
-    Block bTeste = newBlock("Hahaha", (Vector2){20, 50});
-    spawnBlockSpawnerOld(bspawners, &num_bspawners, bTeste);
-    Block bTeste2 = newBlock("Só precisei mudar o código todo", (Vector2){20, 100});
-    spawnBlockSpawnerOld(bspawners, &num_bspawners, bTeste2);
+    // Block bTeste = newBlock("Gerador Manual", (Vector2){550, 150});
+    // spawnBlockSpawnerOld(bspawners, &num_bspawners, bTeste);
+    // Block bTeste2 = newBlock("Geradores feitos manualmente", (Vector2){550, 200});
+    // spawnBlockSpawnerOld(bspawners, &num_bspawners, bTeste2);
 
     // Inicialização manual de um CodePuzzle
     CodePuzzle cp = newCodePuzzle();
-    spawnElementTxt(&cp, "Teste!");
+    spawnElementTxt(&cp, "Texto do codepuzzle!");
     spawnElementBf(&cp);
-    spawnElementTxt(&cp, "Ok");
+    spawnElementTxt(&cp, "Outro texto gerado pelo codepuzzle");
 
-    spawnBlockSpawner(&cp, "Sim");
-    spawnBlockSpawner(&cp, "Não");
+    spawnBlockSpawner(&cp, "Gerador do codepuzzle!");
+    spawnBlockSpawner(&cp, "CODEPUZZLE");
+    spawnBlockSpawner(&cp, "CODEPUZZLE2");
+    spawnBlockSpawner(&cp, "CODEPUZZLE3");
+    spawnBlockSpawner(&cp, "CODEPUZZLE4");
+    spawnBlockSpawner(&cp, "CODEPUZZLE5");
 
     // Camera
     Camera2D camera = { 0 };
@@ -178,7 +182,7 @@ int main(void)
             }
 
         // TODO: Teste de fonte, remover depois
-        DrawTextEx(fonts[0], "typedef enum ElementType {text, field} ElementType;", (Vector2){300.0f, 300.0f}, (float)fonts[0].baseSize, 2, MAROON);
+        // DrawTextEx(fonts[0], "typedef enum ElementType {text, field} ElementType;", (Vector2){300.0f, 300.0f}, (float)fonts[0].baseSize, 2, MAROON);
 
         EndDrawing();
     }

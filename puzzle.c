@@ -198,7 +198,8 @@ CodePuzzle newCodePuzzle() {
         .num_elements = 0,
         .bspawners = {0},
         .num_bspawners = 0,
-        .blocos = newBList()
+        .blocos = newBList(),
+        .nextPosition = {TRAY_H + PUZZLE_PADDING, TRAY_H}
     };
     return cp;
 }
@@ -329,12 +330,18 @@ bool spawnElementBf(CodePuzzle *cp) {
  * importa!
  *=============================================**/
 bool spawnBlockSpawner(CodePuzzle *cp, char text[]) {
+    // Cálculo da posição do spawner  
+    // TODO: Usar o tamanho da fonte ao invés de 20 quando tiver as fontes
+    // TODO: Possivelmente alinhar os blocos lado a lado no futuro também... Ou centralizar pelo menos
+    Vector2 pos = (Vector2){TRAY_PADDING, 
+                            TRAY_PADDING + cp->num_bspawners*((BLOCK_TEXT_PADDING*2 + 20) + TRAY_V_SPACING)};
+
+    // Spawn do spawner propriamente dito
     if (cp->num_bspawners >= MAX_PUZZLE_SPAWNERS) {
         printf("Não foi possível gerar um novo gerador de blocos, máximo (%d) atingido\n", MAX_PUZZLE_SPAWNERS);
         return false;
     } else {
-        // TODO: Após cada inserção os geradores devem ter a posição correta
-        Block base = newBlock(text, (Vector2){rand() % (int)(GetScreenWidth()), rand() % (int)(GetScreenHeight())});
+        Block base = newBlock(text, pos);
         cp->bspawners[cp->num_bspawners] = newBlockSpawner(base);
         cp->num_bspawners += 1;
         return true;
@@ -605,4 +612,25 @@ void updateCodePuzzle(CodePuzzle *cp) {
             }
         } 
     }
+
+    //* Update Posições Textos e Campos
+    //! NÃO FUNCIONA AINDAAAA
+    for (int i = 0; i < cp->num_elements; i++) {
+        Element *e = &cp->elements[i];
+        if (e->type == field) {
+            e->txt->position.x += 1;
+            TextElem *te = e->txt;
+            te->position = cp->nextPosition;
+
+            Vector2 tm = MeasureTextEx(GetFontDefault(), te->str, 20, 1);
+            cp->nextPosition = Vector2Add(cp->nextPosition, (Vector2){tm.x + PUZZLE_H_SPACING, 0});
+        } else {
+            BlockField *be = e->bf;
+            be->rec.x = cp->nextPosition.x;
+            be->rec.y = cp->nextPosition.y;
+
+            cp->nextPosition = Vector2Add(cp->nextPosition, (Vector2){be->rec.width + PUZZLE_H_SPACING, 0});
+        }
+    }
+    cp->nextPosition = (Vector2){TRAY_H + PUZZLE_PADDING, TRAY_H};
 }

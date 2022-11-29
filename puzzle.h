@@ -21,8 +21,8 @@
 #define MAX_PUZZLE_ELEMENTS 64   // Máximo de elementos para cada puzzle
 #define MAX_PUZZLE_SPAWNERS 16   // Máximo de geradores para cada puzzle
 #define TRAY_H 500               // Tamanho da área da esquerda "Tray" 
-#define TRAY_V_SPACING 8         // Espaçamento vertical entre spawners   
-#define TRAY_PADDING 12          // Espaçamento entre os elementos do Tray e sua borda
+#define TRAY_V_SPACING 20         // Espaçamento vertical entre spawners   
+#define TRAY_PADDING 30          // Espaçamento entre os elementos do Tray e sua borda
                                  // TODO Eventualmente alterar isso para centralizar os elementos
 #define PUZZLE_H_SPACING 4       // Espaçamento horizontal entre elementos do puzzle
 #define PUZZLE_V_SPACING 4       // Espaçamento vertical entre elementos do puzzle
@@ -112,6 +112,7 @@ typedef struct CodePuzzle {
     BlockSpawner bspawners[MAX_PUZZLE_SPAWNERS];
     int num_bspawners;
     bList *blocos;
+    Vector2 nextPosition;
 } CodePuzzle;
 
 
