@@ -111,12 +111,12 @@ int main(void)
             ClearBackground(LIGHTGRAY);
             
             // Desenha geradores de blocos
-            for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], &mouse.holding->block, &mouse.hovering->block); }
+            for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], &mouse); }
 
             // Desenha os blocos
             bNode *node = blocos->head;
             while (node != NULL) {
-                DrawBlock(&node->block, &mouse.holding->block, &mouse.hovering->block); 
+                DrawBlock(&node->block, &mouse); 
                 node = node->next;
             }
 
@@ -124,7 +124,7 @@ int main(void)
             for (int i = 0; i < num_bfields; i++) { DrawBlockField(&bfields[i]); }
 
             // Desenha o CodePuzzle
-            DrawCodePuzzle(&cp);
+            DrawCodePuzzle(&cp, &mouse);
 
             BeginMode2D(camera);
             // 1. Begin 2D

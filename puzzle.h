@@ -17,12 +17,16 @@
 #define BLOCK_FIELD_PADDING 4    // Padding entre o campo do bloco e o bloco
 // Geradores de Blocos
 #define NUM_BLOCK_SPAWNER 50     // Máximo de geradores de blocos
-// Puzzles
+// Puzzles (Veja o CodePuzzleStructure.png)
 #define MAX_PUZZLE_ELEMENTS 64   // Máximo de elementos para cada puzzle
 #define MAX_PUZZLE_SPAWNERS 16   // Máximo de geradores para cada puzzle
-#define PUZZLE_PADDING 16        // Espaçamento entre o puzzle e a parte superior e esquerda 
-#define V_ELEMENT_SPACING 8      // Espaçamento vertical entre elementos   
-#define H_ELEMENT_SPACING 12     // Espaçamento horizontal entre elementos
+#define TRAY_H 16                // Tamanho da área da esquerda "Tray" 
+#define TRAY_V_SPACING 8         // Espaçamento vertical entre spawners   
+#define TRAY_PADDING 12          // Espaçamento entre os elementos do Tray e sua borda
+                                 // TODO Eventualmente alterar isso para centralizar os elementos
+#define PUZZLE_H_SPACING 4       // Espaçamento horizontal entre elementos do puzzle
+#define PUZZLE_V_SPACING 4       // Espaçamento vertical entre elementos do puzzle
+#define PUZZLE_PADDING 8         // Espaçamento entre o puzzle e sua borda
 
 /**============================================
  **              Estruturas
@@ -141,10 +145,10 @@ bool spawnBlockSpawner(CodePuzzle *cp, char text[]);
  * raylib
  *=============================================**/
 
-void DrawBlock(Block *b, Block *holding, Block *hovering);
-void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering);
+void DrawBlock(bNode *node, Mouse *m);
+void DrawBlockSpawner(BlockSpawner *bf, Mouse *m);
 void DrawBlockField(BlockField *bf);
-void DrawCodePuzzle(CodePuzzle *cp);
+void DrawCodePuzzle(CodePuzzle *cp, Mouse *m);
 
 
 /**============================================

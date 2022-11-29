@@ -344,15 +344,16 @@ bool spawnBlockSpawner(CodePuzzle *cp, char text[]) {
  * De acordo com isso, desenha o bloco na tela.
  * TODO: Alterar pra receber bNodes ao invés de Blocks
  *=============================================**/
-void DrawBlock(Block *b, Block *holding, Block *hovering) {
+void DrawBlock(bNode *node, Mouse *m) {
     Color textColor = MAROON;
+    Block *b = &node->block;
     int segments = 50; float roundness = 0.4f; float lineThick = 2.0f;
     DrawRectangleRoundedLines(b->rec, roundness, segments, lineThick, DARKGRAY); // Outline
     DrawRectangleRounded(b->rec, roundness, segments, LIGHTGRAY); // Preenchimento sólido
-    if (holding == b) {
+    if (m->holding == node) {
         DrawRectangleRounded(b->rec, roundness, segments, MAROON); // Preenchimento segurando
         textColor = WHITE;
-    } else if (hovering == b) {
+    } else if (m->hovering == node) {
         DrawRectangleRounded(b->rec, roundness, segments, DARKGRAY); // Preenchimento hovering
         textColor = WHITE;
     };
@@ -366,8 +367,8 @@ void DrawBlock(Block *b, Block *holding, Block *hovering) {
  * na tela.
  * TODO: Alterar pra receber bNodes ao invés de Blocks
  *=============================================**/
-void DrawBlockSpawner(BlockSpawner *bf, Block *holding, Block *hovering) {
-    DrawBlock(&bf->base.block, holding, hovering);
+void DrawBlockSpawner(BlockSpawner *bf, Mouse *m) {
+    DrawBlock(&bf->base, m);
 }
 
 /**============================================
@@ -385,7 +386,10 @@ void DrawBlockField(BlockField *bf) {
  * Recebe um CodePuzzle, e desenha ele corretamente
  * na tela
  *=============================================**/
-void DrawCodePuzzle(CodePuzzle *cp) {
+void DrawCodePuzzle(CodePuzzle *cp, Mouse *m) {
+    for (int i = 0; i < cp->num_bspawners; i++) {
+        DrawBlockSpawner(&cp->bspawners[i], m);
+    }
     // TODO:
     // Desenhar background da esquerda
     // Desenhar blockfields
