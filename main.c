@@ -33,7 +33,7 @@ int main(void)
     fonts[0] = LoadFont("resources/fonts/Ticketing.fnt");
 
     // Indicador do mouse
-    Mouse mouse = newMouse();
+    mouse = newMouse();
 
     // Blocos e inicialização
     char text_block[MAX_TEXT_SIZE] = "Teste"; // Texto usado nos blocos, alterado pela GUI
@@ -83,12 +83,12 @@ int main(void)
      **                           UPDATE
      *========================================================================**/
         // float deltaTime = GetFrameTime();
-        mouse.position = GetMousePosition();
+        mouse->position = GetMousePosition();
 
         //! A ordem do update importa
-        updateGeradores(&mouse, blocos, bspawners, &num_bspawners);
-        updateCampos(&mouse, bfields, &num_bfields);
-        updateBNodes(&mouse, blocos);
+        updateGeradores(blocos, bspawners, &num_bspawners);
+        updateCampos(bfields, &num_bfields);
+        updateBNodes(blocos);
 
         // Update da Cãmera
         camera.zoom += ((float)GetMouseWheelMove()*0.05f);
@@ -109,22 +109,22 @@ int main(void)
         BeginDrawing();
 
             ClearBackground(LIGHTGRAY);
+
+            // Desenha o CodePuzzle
+            DrawCodePuzzle(&cp);
             
             // Desenha geradores de blocos
-            for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i], &mouse); }
+            for (int i = 0; i < num_bspawners; i++) { DrawBlockSpawner(&bspawners[i]); }
 
             // Desenha os blocos
             bNode *node = blocos->head;
             while (node != NULL) {
-                DrawBlock(node, &mouse); 
+                DrawBlock(node); 
                 node = node->next;
             }
 
             // Desenha os campos
             for (int i = 0; i < num_bfields; i++) { DrawBlockField(&bfields[i]); }
-
-            // Desenha o CodePuzzle
-            DrawCodePuzzle(&cp, &mouse);
 
             BeginMode2D(camera);
             // 1. Begin 2D
@@ -167,10 +167,10 @@ int main(void)
          *=============================================**/
             if (drawMouseIndicator){
                 float radius = 5.0f;
-                if (mouse.hovering != NULL) radius = 8.0f;
-                if (mouse.holding != NULL) radius = 4.0f;
-                DrawCircleV(mouse.position, radius, LIGHTGRAY);
-                DrawCircleV(mouse.position, radius-2, mouse.color);
+                if (mouse->hovering != NULL) radius = 8.0f;
+                if (mouse->holding != NULL) radius = 4.0f;
+                DrawCircleV(mouse->position, radius, LIGHTGRAY);
+                DrawCircleV(mouse->position, radius-2, mouse->color);
             }
 
         // TODO: Teste de fonte, remover depois
@@ -181,5 +181,7 @@ int main(void)
 
     CloseWindow();
 
+
+    free(mouse);
     return 0;
 }

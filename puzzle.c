@@ -1,5 +1,8 @@
 #include "puzzle.h"
 
+// Alocação de memória estática das variáveis globais (extern no .h)
+Mouse *mouse;
+
 /**==============================================
  *                newBlock()
  *  Inicializa um bloco com o texto e posição
@@ -63,14 +66,13 @@ bNode* newBNode(bNode *prev, Block b, bNode *next) {
  * Cria uma instância da estrutura do Mouse e 
  * inicializa ela com valores padrões.
  *=============================================**/
-Mouse newMouse() {
-    Mouse m = {
-        .position = {-100.0f, -100.0f},
-        .offset = {0.0f, 0.0f},
-        .holding = NULL,
-        .hovering = NULL,
-        .color = MAROON
-    };
+Mouse* newMouse() {
+    Mouse *m = malloc(sizeof(Mouse));
+    m->position = (Vector2){-100.0f, -100.0f};
+    m->offset = (Vector2){0.0f, 0.0f};
+    m->holding = NULL;
+    m->hovering = NULL;
+    m->color = MAROON;
     return m;
 }
 
@@ -83,7 +85,7 @@ Mouse newMouse() {
  * Também verifica o mouse para evitar que ele tenha
  * referências inválidas
  *=============================================**/
-bool removeBNode(Mouse *mouse, bList *list, bNode *node) {
+bool removeBNode(bList *list, bNode *node) {
     // Removendo referências que o mouse pode ter do node
     if (mouse->holding == node) { mouse->holding = NULL; }
     if (mouse->hovering == node) { mouse->hovering = NULL; }
@@ -344,16 +346,16 @@ bool spawnBlockSpawner(CodePuzzle *cp, char text[]) {
  * De acordo com isso, desenha o bloco na tela.
  * TODO: Alterar pra receber bNodes ao invés de Blocks
  *=============================================**/
-void DrawBlock(bNode *node, Mouse *m) {
+void DrawBlock(bNode *node) {
     Color textColor = MAROON;
     Block *b = &node->block;
     int segments = 50; float roundness = 0.4f; float lineThick = 2.0f;
     DrawRectangleRoundedLines(b->rec, roundness, segments, lineThick, DARKGRAY); // Outline
     DrawRectangleRounded(b->rec, roundness, segments, LIGHTGRAY); // Preenchimento sólido
-    if (m->holding == node) {
+    if (mouse->holding == node) {
         DrawRectangleRounded(b->rec, roundness, segments, MAROON); // Preenchimento segurando
         textColor = WHITE;
-    } else if (m->hovering == node) {
+    } else if (mouse->hovering == node) {
         DrawRectangleRounded(b->rec, roundness, segments, DARKGRAY); // Preenchimento hovering
         textColor = WHITE;
     };
@@ -367,8 +369,8 @@ void DrawBlock(bNode *node, Mouse *m) {
  * na tela.
  * TODO: Alterar pra receber bNodes ao invés de Blocks
  *=============================================**/
-void DrawBlockSpawner(BlockSpawner *bf, Mouse *m) {
-    DrawBlock(&bf->base, m);
+void DrawBlockSpawner(BlockSpawner *bf) {
+    DrawBlock(&bf->base);
 }
 
 /**============================================
@@ -386,9 +388,22 @@ void DrawBlockField(BlockField *bf) {
  * Recebe um CodePuzzle, e desenha ele corretamente
  * na tela
  *=============================================**/
-void DrawCodePuzzle(CodePuzzle *cp, Mouse *m) {
+void DrawCodePuzzle(CodePuzzle *cp) {
+    DrawRectangle(0, 0, TRAY_H, GetScreenHeight(), GRAY);
     for (int i = 0; i < cp->num_bspawners; i++) {
-        DrawBlockSpawner(&cp->bspawners[i], m);
+        DrawBlockSpawner(&cp->bspawners[i]);
+    }
+    for (int i = 0; i < cp->num_elements; i++) {
+        Element e = cp->elements[i];
+        if (e.type == text) {
+            // Texto
+            TextElem *te = e.txt;
+            // TODO Alterar para usar fonte externa -> Usar o extern no .h dnv
+            DrawText(te->str, te->position.x, te->position.y, 10, MAROON);
+        } else {
+            // Field
+            BlockField *be = e.bf;
+        }
     }
     // TODO:
     // Desenhar background da esquerda
@@ -407,7 +422,7 @@ void DrawCodePuzzle(CodePuzzle *cp, Mouse *m) {
  * Ao final da função, nós pertencentes a um campo
  * tem seu campo owned = true
  *=============================================**/
-void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
+void updateCampos(BlockField bfields[], int *num_bfields) {
     // Quando um mouse está segurando um bloco e para em cima de um campo, esse
     // campo deve acomodar o bloco. 
 
@@ -454,7 +469,7 @@ void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields) {
  * Ao final da função, blocos gerados por um gerador
  * que estejam agarrados pelo mouse tem seu campo owned = true.
  *=============================================**/
-void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *num_bspawners) {
+void updateGeradores(bList *list, BlockSpawner bspawners[], int *num_bspawners) {
     for (int i = 0; i < *num_bspawners; i++) {
         BlockSpawner *bs = &bspawners[i];
         bNode *base = &bs->base;
@@ -496,7 +511,7 @@ void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *n
  * estado do mouse, e da verificação de owner de 
  * cada bloco.
  *=============================================**/
-void updateBNodes(Mouse *mouse, bList *list) {
+void updateBNodes(bList *list) {
     bNode *lastHover = NULL;
 
     bool mouseReleased = IsMouseButtonReleased(0);
@@ -533,7 +548,7 @@ void updateBNodes(Mouse *mouse, bList *list) {
         }
 
         if (!n->owned) {
-            removeBNode(mouse, list, n);
+            removeBNode(list, n);
         } else if (!n->permanent) {
             // Exige que se confirme um dono pra próxima vez
             // Os updates anteriores devem tornar owned=true a cada iteração

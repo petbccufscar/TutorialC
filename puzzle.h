@@ -20,7 +20,7 @@
 // Puzzles (Veja o CodePuzzleStructure.png)
 #define MAX_PUZZLE_ELEMENTS 64   // Máximo de elementos para cada puzzle
 #define MAX_PUZZLE_SPAWNERS 16   // Máximo de geradores para cada puzzle
-#define TRAY_H 16                // Tamanho da área da esquerda "Tray" 
+#define TRAY_H 500               // Tamanho da área da esquerda "Tray" 
 #define TRAY_V_SPACING 8         // Espaçamento vertical entre spawners   
 #define TRAY_PADDING 12          // Espaçamento entre os elementos do Tray e sua borda
                                  // TODO Eventualmente alterar isso para centralizar os elementos
@@ -64,6 +64,12 @@ typedef struct Mouse {
     bNode *hovering;
     Color color;
 } Mouse;
+
+// Mouse como variável global
+// Várias funções usam os valores do Mouse, então
+// tornamos a variável acessível de qualquer lugar
+// sendo que ela é inicializada pelo main.c
+extern Mouse *mouse;
 
 // Gerador de Bloco
 typedef struct BlockSpawner {
@@ -116,8 +122,8 @@ typedef struct CodePuzzle {
 Block newBlock(char text[], Vector2 position);
 bList* newBList();
 bNode* newBNode(bNode *prev, Block b, bNode *next);
-Mouse newMouse();
-bool removeBNode(Mouse *mouse, bList *list, bNode *node);
+Mouse* newMouse();
+bool removeBNode(bList *list, bNode *node);
 bNode* addBNode(bList *list, Block b);
 BlockSpawner newBlockSpawner(Block base);
 BlockField newBlockField();
@@ -145,10 +151,10 @@ bool spawnBlockSpawner(CodePuzzle *cp, char text[]);
  * raylib
  *=============================================**/
 
-void DrawBlock(bNode *node, Mouse *m);
-void DrawBlockSpawner(BlockSpawner *bf, Mouse *m);
+void DrawBlock(bNode *node);
+void DrawBlockSpawner(BlockSpawner *bf);
 void DrawBlockField(BlockField *bf);
-void DrawCodePuzzle(CodePuzzle *cp, Mouse *m);
+void DrawCodePuzzle(CodePuzzle *cp);
 
 
 /**============================================
@@ -158,9 +164,9 @@ void DrawCodePuzzle(CodePuzzle *cp, Mouse *m);
  * com base na interação do usuário
  *=============================================**/
 
-void updateGeradores(Mouse *mouse, bList *list, BlockSpawner bspawners[], int *num_bspawners);
-void updateCampos(Mouse *mouse, BlockField bfields[], int *num_bfields);
-void updateBNodes(Mouse *mouse, bList *list);
+void updateGeradores(bList *list, BlockSpawner bspawners[], int *num_bspawners);
+void updateCampos(BlockField bfields[], int *num_bfields);
+void updateBNodes(bList *list);
 
 
 #endif
