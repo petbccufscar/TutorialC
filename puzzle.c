@@ -399,18 +399,12 @@ void DrawCodePuzzle(CodePuzzle *cp) {
             // Texto
             TextElem *te = e.txt;
             // TODO Alterar para usar fonte externa -> Usar o extern no .h dnv
-            DrawText(te->str, te->position.x, te->position.y, 10, MAROON);
+            DrawText(te->str, te->position.x, te->position.y, 18, MAROON);
         } else {
             // Field
-            BlockField *be = e.bf;
+            DrawBlockField(e.bf);
         }
     }
-    // TODO:
-    // Desenhar background da esquerda
-    // Desenhar blockfields
-
-    // Desenhar sequencialmente os elementos
-    // chamando o Draw apropriado
 }
 
 

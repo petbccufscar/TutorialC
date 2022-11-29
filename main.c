@@ -139,7 +139,7 @@ int main(void)
          *=============================================**/
                 float posX = screenWidth - 200; float posY = screenHeight - 50;
                 float dist_linhas = 25;
-                DrawFPS(10, 10);
+                DrawFPS(screenWidth - 90, screenHeight - 30);
                 
                 // Linha 0 ===
                 drawMouseIndicator = GuiCheckBox((Rectangle){ posX, posY, 20, 20}, "Indicador do Mouse", drawMouseIndicator);
