@@ -215,7 +215,7 @@ Element newStrElement(char str[]) {
     // TODO: Criar função de desalocar memória de um CodePuzzle
     TextElem *txt = malloc(sizeof(TextElem));
     strcpy(txt->str, str);
-    txt->position = (Vector2){0.0f, 0.0f};
+    txt->position = (Vector2){rand() % (int)(GetScreenWidth()), rand() % (int)(GetScreenHeight())};
 
     Element e = {
         .type = text,
@@ -334,7 +334,7 @@ bool spawnBlockSpawner(CodePuzzle *cp, char text[]) {
         return false;
     } else {
         // TODO: Após cada inserção os geradores devem ter a posição correta
-        Block base = newBlock(text, (Vector2){0.0f, 0.0f});
+        Block base = newBlock(text, (Vector2){rand() % (int)(GetScreenWidth()), rand() % (int)(GetScreenHeight())});
         cp->bspawners[cp->num_bspawners] = newBlockSpawner(base);
         cp->num_bspawners += 1;
         return true;
@@ -400,14 +400,45 @@ void DrawCodePuzzle(CodePuzzle *cp) {
             // Texto
             TextElem *te = e.txt;
             // TODO Alterar para usar fonte externa -> Usar o extern no .h dnv
-            DrawText(te->str, te->position.x, te->position.y, 18, MAROON);
+            DrawText(te->str, te->position.x, te->position.y, 20, MAROON);
         } else {
             // Field
             DrawBlockField(e.bf);
         }
     }
+    bNode *node = cp->blocos->head;
+    while (node != NULL) {
+        DrawBlock(node); 
+        node = node->next;
+    }
 }
 
+/**============================================
+ *            updateCamposMouseSolto()
+ * Função auxiliar do updateCampos() e updateCodePuzzle()
+ *=============================================**/
+void updateCampoMouseSolto(BlockField *bf) {
+    // Para o dado campo, verificar se foi solto na sua posição
+    printf("\n\n%d %d %d\n\n", CheckCollisionPointRec(mouse->position, bf->rec), mouse->holding != NULL, (bf->node == NULL || bf->node == mouse->holding));
+    if (CheckCollisionPointRec(mouse->position, bf->rec)        // Posição correta
+        && mouse->holding != NULL                               // O mouse está segurando algo
+        && (bf->node == NULL || bf->node == mouse->holding)) {  // O campo está vazio ou com o mesmo bloco que o mouse
+        bf->node = mouse->holding;
+        // Move bloco para o campo
+        bf->node->block.rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
+        bf->node->block.rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
+        // Ajusta o tamanho do campo
+        bf->rec.width = bf->node->block.rec.width  + BLOCK_FIELD_PADDING * 2;
+        // Retira dragging
+        bf->node->block.dragging = false;
+        bf->node->owned = true;
+    } else if (mouse->holding == bf->node) {
+        if (bf->node != NULL){
+            bf->node = NULL;
+        }
+        bf->rec.width = bf->rec.height;
+    }
+}
 
 /**============================================
  *               updateCampos()
@@ -424,26 +455,7 @@ void updateCampos(BlockField bfields[], int *num_bfields) {
     // Um bloco acabou de ser solto?
     if (IsMouseButtonReleased(0)) {
         for (int i = 0; i < *num_bfields; i++) {
-            // Para cada campo, verificar se foi solto na sua posição
-            BlockField *bf = &bfields[i];
-            if (CheckCollisionPointRec(mouse->position, bf->rec)
-                && mouse->holding != NULL
-                && (bf->node == NULL || bf->node == mouse->holding)) {
-                bf->node = mouse->holding;
-                // Move bloco para o campo
-                bf->node->block.rec.x = bf->rec.x + BLOCK_FIELD_PADDING;
-                bf->node->block.rec.y = bf->rec.y + BLOCK_FIELD_PADDING;
-                // Ajusta o tamanho do campo
-                bf->rec.width = bf->node->block.rec.width  + BLOCK_FIELD_PADDING * 2;
-                // Retira dragging
-                bf->node->block.dragging = false;
-                bf->node->owned = true;
-            } else if (mouse->holding == bf->node) {
-                if (bf->node != NULL){
-                    bf->node = NULL;
-                }
-                bf->rec.width = bf->rec.height;
-            }
+            updateCampoMouseSolto(&bfields[i]);
         }
     }
 
@@ -573,13 +585,24 @@ void updateBNodes(bList *list) {
  * o update
  *=============================================**/
 void updateCodePuzzle(CodePuzzle *cp) {
+    //* Geradores
     updateGeradores(cp->blocos, cp->bspawners, &cp->num_bspawners);
-    /*
-    TODO:
-    Como o updateCampos depende de uma lista de campos pra
-    funcionar, precisa separar a função em updateCampo() que
-    atualiza um único campo, e ai aqui dentro faz o loop dos
-    elementos, passando pra essa função se for campo
-    */
-   updateBNodes(cp->blocos);
+
+    //* Campos
+    if (IsMouseButtonReleased(0)) {
+        for (int i = 0; i < cp->num_elements; i++) {
+            if (cp->elements[i].type == field) {
+                updateCampoMouseSolto(cp->elements[i].bf);
+            }
+        }
+    }
+
+    for (int i = 0; i < cp->num_elements; i++) {
+        if (cp->elements[i].type == field) {
+            BlockField *bf = cp->elements[i].bf;
+            if (bf->node != NULL) {
+                bf->node->owned = true;
+            }
+        } 
+    }
 }

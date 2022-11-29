@@ -88,7 +88,11 @@ int main(void)
         //! A ordem do update importa
         updateGeradores(blocos, bspawners, &num_bspawners);
         updateCampos(bfields, &num_bfields);
-        updateBNodes(blocos);
+
+        updateCodePuzzle(&cp);
+
+        updateBNodes(blocos); // Blocos normais
+        updateBNodes(cp.blocos); // Blocos do codepuzzle
 
         // Update da Cãmera
         camera.zoom += ((float)GetMouseWheelMove()*0.05f);
