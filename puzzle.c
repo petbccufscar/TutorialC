@@ -197,7 +197,8 @@ CodePuzzle newCodePuzzle() {
         .elements = {0},
         .num_elements = 0,
         .bspawners = {0},
-        .num_bspawners = 0
+        .num_bspawners = 0,
+        .blocos = newBList()
     };
     return cp;
 }
@@ -563,4 +564,22 @@ void updateBNodes(bList *list) {
             b->dragging = true;
         }
     }
+}
+
+/**============================================
+ *               updateCodePuzzle()
+ * Percorre o CodePuzzle utilizando as funções
+ * de update próprias de cada elemento para fazer
+ * o update
+ *=============================================**/
+void updateCodePuzzle(CodePuzzle *cp) {
+    updateGeradores(cp->blocos, cp->bspawners, &cp->num_bspawners);
+    /*
+    TODO:
+    Como o updateCampos depende de uma lista de campos pra
+    funcionar, precisa separar a função em updateCampo() que
+    atualiza um único campo, e ai aqui dentro faz o loop dos
+    elementos, passando pra essa função se for campo
+    */
+   updateBNodes(cp->blocos);
 }

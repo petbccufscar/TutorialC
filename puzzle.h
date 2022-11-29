@@ -111,6 +111,7 @@ typedef struct CodePuzzle {
     int num_elements;
     BlockSpawner bspawners[MAX_PUZZLE_SPAWNERS];
     int num_bspawners;
+    bList *blocos;
 } CodePuzzle;
 
 
@@ -167,6 +168,7 @@ void DrawCodePuzzle(CodePuzzle *cp);
 void updateGeradores(bList *list, BlockSpawner bspawners[], int *num_bspawners);
 void updateCampos(BlockField bfields[], int *num_bfields);
 void updateBNodes(bList *list);
+void updateCodePuzzle(CodePuzzle *cp);
 
 
 #endif
