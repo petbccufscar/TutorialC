@@ -116,7 +116,7 @@ int main(void)
             // Desenha os blocos
             bNode *node = blocos->head;
             while (node != NULL) {
-                DrawBlock(&node->block, &mouse); 
+                DrawBlock(node, &mouse); 
                 node = node->next;
             }
 
