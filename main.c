@@ -57,16 +57,21 @@ int main(void)
 
     // Inicialização manual de um CodePuzzle
     CodePuzzle cp = newCodePuzzle();
-    spawnElementTxt(&cp, "Texto do codepuzzle!");
+    spawnElementTxt(&cp, "for (int i =");
     spawnElementBf(&cp);
-    spawnElementTxt(&cp, "Outro texto gerado pelo codepuzzle");
+    spawnElementTxt(&cp, "; i");
+    spawnElementBf(&cp);
+    spawnElementTxt(&cp, "; i");
+    spawnElementBf(&cp);
+    spawnElementTxt(&cp, ";) {");
 
-    spawnBlockSpawner(&cp, "Gerador do codepuzzle!");
-    spawnBlockSpawner(&cp, "CODEPUZZLE");
-    spawnBlockSpawner(&cp, "CODEPUZZLE2");
-    spawnBlockSpawner(&cp, "CODEPUZZLE3");
-    spawnBlockSpawner(&cp, "CODEPUZZLE4");
-    spawnBlockSpawner(&cp, "CODEPUZZLE5");
+    spawnBlockSpawner(&cp, " 0 ");
+    spawnBlockSpawner(&cp, " 1 ");
+    spawnBlockSpawner(&cp, "< 20");
+    spawnBlockSpawner(&cp, "<= 20");
+    spawnBlockSpawner(&cp, "== 20");
+    spawnBlockSpawner(&cp, "++");
+    spawnBlockSpawner(&cp, "--");
 
     // Camera
     Camera2D camera = { 0 };

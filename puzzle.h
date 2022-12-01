@@ -11,7 +11,7 @@
 #define NUM_BLOCKS 50            // Máximo de blocos que podem existir
 #define MAX_TEXT_SIZE 255       // Tamanho máximo do texto de cada bloco (Nota: Se o texto está bugando com acentos, deve ser isso)
 #define FONT_SIZE 20             // Tamanho do texto
-#define BLOCK_TEXT_PADDING 8     // Padding entre o bloco e o texto no meio
+#define BLOCK_TEXT_PADDING 3     // Padding entre o bloco e o texto no meio
 // Campo de Bloco
 #define NUM_BLOCK_FIELDS 50      // Máximo de campos de bloco
 #define BLOCK_FIELD_PADDING 4    // Padding entre o campo do bloco e o bloco
@@ -24,9 +24,9 @@
 #define TRAY_V_SPACING 20         // Espaçamento vertical entre spawners   
 #define TRAY_PADDING 30          // Espaçamento entre os elementos do Tray e sua borda
                                  // TODO Eventualmente alterar isso para centralizar os elementos
-#define PUZZLE_H_SPACING 4       // Espaçamento horizontal entre elementos do puzzle
+#define PUZZLE_H_SPACING 12       // Espaçamento horizontal entre elementos do puzzle
 #define PUZZLE_V_SPACING 4       // Espaçamento vertical entre elementos do puzzle
-#define PUZZLE_PADDING 8         // Espaçamento entre o puzzle e sua borda
+#define PUZZLE_PADDING 30         // Espaçamento entre o puzzle e sua borda
 
 /**============================================
  **              Estruturas

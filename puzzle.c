@@ -211,8 +211,6 @@ CodePuzzle newCodePuzzle() {
  * uma string
  *=============================================**/
 Element newStrElement(char str[]) {
-    // TODO: Receber Vector2 da posição depois que as funções de 
-    //       spawn ficarem decidindo isso...
     // TODO: Criar função de desalocar memória de um CodePuzzle
     TextElem *txt = malloc(sizeof(TextElem));
     strcpy(txt->str, str);
@@ -614,23 +612,30 @@ void updateCodePuzzle(CodePuzzle *cp) {
     }
 
     //* Update Posições Textos e Campos
-    //! NÃO FUNCIONA AINDAAAA
+    // TODO Precisa atualizar toda vez que um campo atualiza, não todo frame...
     for (int i = 0; i < cp->num_elements; i++) {
         Element *e = &cp->elements[i];
-        if (e->type == field) {
+        if (e->type == text) {
             e->txt->position.x += 1;
             TextElem *te = e->txt;
             te->position = cp->nextPosition;
 
-            Vector2 tm = MeasureTextEx(GetFontDefault(), te->str, 20, 1);
+            Vector2 tm = MeasureTextEx(GetFontDefault(), te->str, 20, 2);
             cp->nextPosition = Vector2Add(cp->nextPosition, (Vector2){tm.x + PUZZLE_H_SPACING, 0});
         } else {
             BlockField *be = e->bf;
             be->rec.x = cp->nextPosition.x;
-            be->rec.y = cp->nextPosition.y;
+            be->rec.y = cp->nextPosition.y - (BLOCK_TEXT_PADDING*2 + FONT_SIZE)/2; // Diminuimos metade da altura do bloco pra centralizar
+
+            //! Band-aid pro bloco seguir o campo, copiado da função de update dos campos
+            if (be->node != NULL) {
+                // Move bloco para o campo
+                be->node->block.rec.x = be->rec.x + BLOCK_FIELD_PADDING;
+                be->node->block.rec.y = be->rec.y + BLOCK_FIELD_PADDING;
+            }
 
             cp->nextPosition = Vector2Add(cp->nextPosition, (Vector2){be->rec.width + PUZZLE_H_SPACING, 0});
         }
     }
-    cp->nextPosition = (Vector2){TRAY_H + PUZZLE_PADDING, TRAY_H};
+    cp->nextPosition = (Vector2){TRAY_H + PUZZLE_PADDING, PUZZLE_PADDING};
 }
